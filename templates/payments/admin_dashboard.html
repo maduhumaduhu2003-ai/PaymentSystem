@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">Admin Payments Dashboard</h2>
+
+<!-- PAID -->
+<h4>Pending Approval (Paid Users)</h4>
+
+<table class="table table-bordered">
+    <tr>
+        <th>User</th>
+        <th>Package</th>
+        <th>Decoder</th>
+        <th>Amount</th>
+        <th>Action</th>
+    </tr>
+
+    {% for p in pending %}
+    <tr>
+        <td>{{ p.user.phone_number }}</td>
+        <td>{{ p.package.name }}</td>
+        <td>{{ p.decoder_number }}</td>
+        <td>{{ p.amount }}</td>
+        <td>
+            <a href="{% url 'start_processing' p.id %}" class="btn btn-warning btn-sm">
+                Process
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<hr>
+
+<!-- PROCESSING -->
+<h4>Processing</h4>
+
+<table class="table table-bordered">
+    {% for p in processing %}
+    <tr>
+        <td>{{ p.user.phone_number }}</td>
+        <td>{{ p.package.name }}</td>
+        <td>{{ p.decoder_number }}</td>
+        <td>
+            <a href="{% url 'mark_completed' p.id %}" class="btn btn-success btn-sm">
+                Activate
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+
+<hr>
+
+<!-- COMPLETED -->
+<h4>Completed Activations</h4>
+
+<table class="table table-bordered">
+    {% for p in completed %}
+    <tr>
+        <td>{{ p.user.phone_number }}</td>
+        <td>{{ p.package.name }}</td>
+        <td>{{ p.decoder_number }}</td>
+        <td class="text-success">COMPLETED</td>
+    </tr>
+    {% endfor %}
+</table>
+
+{% endblock %}

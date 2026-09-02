@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+    <div class="container-fluid px-4">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-credit-card me-2" style="color: #f28c18;"></i>
+                    Payments
+                </h4>
+                <p class="text-muted small mt-1">
+                    View and manage all payments
+                </p>
+            </div>
+            <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 8px 16px; border-radius: 20px;">
+                <i class="bi bi-files me-1"></i>
+                {{ page_obj.paginator.count }} Payments
+            </span>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" name="search" class="form-control" placeholder="Search by reference, decoder, phone..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            {% for status in status_choices %}
+                            <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>
+                                {{ status.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" name="date" class="form-control" value="{{ date_filter }}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn" style="background: #f28c18; color: white; width: 100%;">
+                            <i class="bi bi-search me-1"></i> Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+            <div class="card-body" style="padding: 0;">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Customer</th>
+                                <th>Decoder</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th style="min-width: 120px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in page_obj %}
+                            <tr>
+                                <td><code>{{ payment.order_reference }}</code></td>
+                                <td>{{ payment.user.phone_number }}</td>
+                                <td>{{ payment.decoder_number }}</td>
+                                <td><strong>TZS {{ payment.amount }}</strong></td>
+                                <td>
+                                    <span class="badge" style="
+                                        background: {% if payment.status == 'COMPLETED' %}#d4edda; color: #155724;
+                                        {% elif payment.status == 'PAID' %}#cce5ff; color: #004085;
+                                        {% elif payment.status == 'FAILED' %}#f8d7da; color: #721c24;
+                                        {% elif payment.status == 'PROCESSING' %}#cce5ff; color: #004085;
+                                        {% else %}#fff3cd; color: #856404;
+                                        {% endif %}
+                                        padding: 4px 12px; border-radius: 20px;
+                                    ">
+                                        {{ payment.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>{{ payment.created_at|date:"d M Y H:i" }}</td>
+                                <td>
+                                    <!-- View Button -->
+                                    <button class="btn btn-sm" style="background: #f28c18; color: white;" onclick="openPaymentDetail({{ payment.id }})">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    
+                                    <!-- Mark as Ready Button - Only for PAID status -->
+                                    {% if payment.status == 'PAID' %}
+                                    <button class="btn btn-sm" style="background: #28a745; color: white;" onclick="markAsReady({{ payment.id }}, '{{ payment.order_reference }}')">
+                                        <i class="bi bi-check2-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No payments found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="mt-3">
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+<!-- =========================================================
+     PAYMENT DETAIL MODAL
+========================================================= -->
+<div class="modal fade" id="paymentDetailModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-info-circle me-2" style="color: #f28c18;"></i>
+                    Payment Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="paymentDetailContent">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+<script>
+// =========================================================
+// OPEN PAYMENT DETAIL
+// =========================================================
+function openPaymentDetail(paymentId) {
+    const modal = new bootstrap.Modal(document.getElementById('paymentDetailModal'));
+    const content = document.getElementById('paymentDetailContent');
+    
+    // Show loading
+    content.innerHTML = `
+        <div class="text-center py-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch payment details
+    fetch(`/business/payment/${paymentId}/`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            content.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle me-2"></i>
+                    ${data.error}
+                </div>
+            `;
+            return;
+        }
+        
+        // Format status badge color
+        let statusColor = '#ffc107'; // default
+        if (data.status === 'COMPLETED') statusColor = '#28a745';
+        else if (data.status === 'PAID') statusColor = '#17a2b8';
+        else if (data.status === 'FAILED') statusColor = '#dc3545';
+        else if (data.status === 'PROCESSING') statusColor = '#007bff';
+        
+        content.innerHTML = `
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Order Reference</span>
+                        <strong><code>${data.order_reference}</code></strong>
+                    </div>
+                    <hr>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Customer</span>
+                    <div><strong>${data.customer}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Package</span>
+                    <div><strong>${data.package}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Decoder</span>
+                    <div><strong>${data.decoder_number}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Amount</span>
+                    <div><strong style="color: #f28c18;">TZS ${data.amount}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Payment Phone</span>
+                    <div><strong>${data.payment_phone}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Transaction ID</span>
+                    <div><strong>${data.transaction_id || 'N/A'}</strong></div>
+                </div>
+                <div class="col-12">
+                    <span class="text-muted small">Status</span>
+                    <div>
+                        <span class="badge" style="background: ${statusColor}; color: white; padding: 6px 14px; border-radius: 20px;">
+                            ${data.status_display}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <span class="text-muted small">Created</span>
+                    <div><strong>${data.created_at}</strong></div>
+                </div>
+                ${data.completed_at ? `
+                <div class="col-12">
+                    <span class="text-muted small">Completed</span>
+                    <div><strong>${data.completed_at}</strong></div>
+                </div>
+                ` : ''}
+                ${data.processed_at ? `
+                <div class="col-12">
+                    <span class="text-muted small">Processed</span>
+                    <div><strong>${data.processed_at}</strong></div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    })
+    .catch(error => {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                Failed to load payment details
+            </div>
+        `;
+    });
+}
+
+// =========================================================
+// MARK AS READY
+// =========================================================
+function markAsReady(paymentId, orderReference) {
+    if (!confirm(`Are you sure you want to mark payment ${orderReference} as READY?`)) {
+        return;
+    }
+    
+    // Show loading state on button
+    const buttons = document.querySelectorAll(`button[onclick*="markAsReady(${paymentId},"]`);
+    buttons.forEach(btn => {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+        btn.disabled = true;
+    });
+    
+    fetch(`/business/payment/mark-ready/${paymentId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.main-content').prepend(alertDiv);
+            
+            // Reload after 1.5 seconds
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            alert(data.error || 'Failed to mark as ready');
+        }
+    })
+    .catch(error => {
+        alert('An error occurred. Please try again.');
+    })
+    .finally(() => {
+        buttons.forEach(btn => {
+            btn.innerHTML = '<i class="bi bi-check2-circle"></i>';
+            btn.disabled = false;
+        });
+    });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+
+    <div class="container-fluid px-4">
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-credit-card me-2" style="color: #f28c18;"></i>
+                    Your Payments
+                </h4>
+                <p class="text-muted small mt-1">
+                    Track all your payment history and status
+                </p>
+            </div>
+            <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 8px 16px; border-radius: 20px;">
+                <i class="bi bi-files me-1"></i>
+                {{ payments|length }} Payments
+            </span>
+        </div>
+
+        <!-- Payments List -->
+        <div class="card" style="border: 1px solid #e5e5e5 !important; border-radius: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035) !important;">
+
+            <div class="card-body" style="padding: 0;">
+
+                {% for p in payments %}
+
+                <div class="px-4 py-3" style="border-bottom: 1px solid #f0f0f0; {% if forloop.last %}border-bottom: none;{% endif %}">
+
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+
+                        <!-- LEFT SIDE -->
+                        <div class="flex-grow-1">
+
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h5 class="fw-bold mb-0" style="color: #333333; font-size: 16px;">
+                                    {{ p.package.name }}
+                                </h5>
+                                <span class="badge" style="background: #f0f0f0; color: #777777; padding: 2px 10px; border-radius: 12px; font-size: 11px;">
+                                    {{ p.package.duration_months }}mo
+                                </span>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-3" style="font-size: 13px; color: #777777;">
+                                <span>
+                                    <i class="bi bi-qr-code me-1" style="color: #f28c18;"></i>
+                                    {{ p.decoder_number }}
+                                </span>
+                                <span>
+                                    <i class="bi bi-phone me-1" style="color: #f28c18;"></i>
+                                    {{ p.payment_phone }}
+                                </span>
+                                <span>
+                                    <i class="bi bi-upc-scan me-1" style="color: #f28c18;"></i>
+                                    {{ p.order_reference }}
+                                </span>
+                                <span>
+                                    <i class="bi bi-calendar3 me-1" style="color: #f28c18;"></i>
+                                    {{ p.created_at|date:"d M Y" }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <!-- RIGHT SIDE -->
+                        <div class="text-md-end d-flex flex-column flex-md-row align-items-md-center gap-3">
+
+                            <!-- Amount -->
+                            <div class="text-start text-md-end">
+                                <div class="fw-bold" style="color: #f28c18; font-size: 18px;">
+                                    TZS {{ p.amount }}
+                                </div>
+                            </div>
+
+                            <!-- Status Badge -->
+                            <div>
+                                {% if p.status == 'COMPLETED' %}
+                                    <span class="badge" style="background: #d4edda; color: #155724; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        COMPLETED
+                                    </span>
+
+                                {% elif p.status == 'PROCESSING' %}
+                                    <span class="badge" style="background: #cce5ff; color: #004085; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
+                                        <i class="bi bi-arrow-repeat me-1"></i>
+                                        PROCESSING
+                                    </span>
+
+                                {% elif p.status == 'PAID' %}
+                                    <span class="badge" style="background: #d1ecf1; color: #0c5460; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
+                                        <i class="bi bi-check2-circle me-1"></i>
+                                        PAID
+                                    </span>
+
+                                {% elif p.status == 'FAILED' %}
+                                    <span class="badge" style="background: #f8d7da; color: #721c24; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
+                                        <i class="bi bi-x-circle me-1"></i>
+                                        FAILED
+                                    </span>
+
+                                {% else %}
+                                    <span class="badge" style="background: #fff3cd; color: #856404; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        PENDING
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- View Button -->
+                            <div>
+                                <a href="{% url 'payment_status' p.id %}"
+                                   class="btn btn-sm" style="background: #f28c18; color: #ffffff; border-radius: 4px; padding: 6px 16px; font-weight: 500; transition: all 0.2s ease;">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Details
+                                </a>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {% empty %}
+
+                <!-- Empty State -->
+                <div class="text-center py-5" style="background: #fafafa; border-radius: 6px; margin: 20px;">
+                    <i class="bi bi-credit-card" style="font-size: 48px; color: #cccccc;"></i>
+                    <h5 class="mt-3" style="color: #999999;">No Payments Yet</h5>
+                    <p class="text-muted small">You haven't made any payments. Start by selecting a package.</p>
+                    <a href="{% url 'dashboard' %}" class="btn mt-2" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 8px 24px; border-radius: 4px;">
+                        <i class="bi bi-box me-1"></i>
+                        Browse Packages
+                    </a>
+                </div>
+
+                {% endfor %}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

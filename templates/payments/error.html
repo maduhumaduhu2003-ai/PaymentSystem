@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+
+    <div class="container-fluid px-4">
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-exclamation-circle me-2" style="color: #dc3545;"></i>
+                    Payment Error
+                </h4>
+                <p class="text-muted small mt-1">
+                    There was an issue processing your payment
+                </p>
+            </div>
+        </div>
+
+        <div class="row justify-content-center">
+
+            <div class="col-lg-5 col-md-7">
+
+                <div class="card" style="border: 1px solid #e5e5e5 !important; border-radius: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035) !important;">
+
+                    <div class="card-body" style="padding: 40px 30px; text-align: center;">
+
+                        <!-- Error Icon -->
+                        <div style="width: 80px; height: 80px; background: #f8d7da; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 20px auto;">
+                            <i class="bi bi-x-circle-fill" style="font-size: 42px; color: #dc3545;"></i>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 16px 20px; margin-bottom: 20px;">
+                            <h5 class="mb-0" style="color: #721c24;">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                {{ message }}
+                            </h5>
+                        </div>
+
+                        <p style="color: #777777; font-size: 15px; margin-bottom: 25px;">
+                            <i class="bi bi-info-circle me-1" style="color: #f28c18;"></i>
+                            Something went wrong with your payment. Please try again or contact support.
+                        </p>
+
+                        <!-- Help Tips -->
+                        <div style="background: #fafafa; border-radius: 6px; padding: 16px 20px; border: 1px solid #e5e5e5; margin-bottom: 25px; text-align: left;">
+                            <p class="mb-2" style="font-size: 13px; color: #555555; font-weight: 500;">
+                                <i class="bi bi-lightbulb me-2" style="color: #f28c18;"></i>
+                                What you can do:
+                            </p>
+                            <ul class="mb-0" style="font-size: 13px; color: #777777; padding-left: 20px;">
+                                <li>Check your payment details and try again</li>
+                                <li>Ensure you have sufficient balance</li>
+                                <li>Contact support if the issue persists</li>
+                            </ul>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'dashboard' %}" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;">
+                                <i class="bi bi-house-door me-1"></i>
+                                Return to Dashboard
+                            </a>
+                            <a href="javascript:history.back()" class="btn" style="background: transparent; border: 1px solid #e5e5e5; color: #555555; padding: 11px; border-radius: 4px; font-weight: 500;">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Go Back
+                            </a>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h3 class="mb-4">All Transactions (Admin)</h3>
+
+<div class="list-group">
+
+    {% for p in payments %}
+    <div class="list-group-item">
+
+        <div class="row">
+
+            <div class="col-md-8">
+
+                <strong>{{ p.user.username }}</strong> — {{ p.package.name }}<br>
+
+                Decoder: {{ p.decoder_number }} — Phone: {{ p.payment_phone }}<br>
+
+                <small class="text-muted">
+                    Ref: {{ p.order_reference }} | TXN: {{ p.transaction_id }}
+                </small>
+
+            </div>
+
+            <div class="col-md-4 text-end">
+
+                <div><strong>{{ p.amount }} TZS</strong></div>
+
+                {% if p.status == 'SUCCESS' %}
+                    <span class="badge bg-success">SUCCESS</span>
+                {% elif p.status == 'FAILED' %}
+                    <span class="badge bg-danger">FAILED</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">PENDING</span>
+                {% endif %}
+
+                <div class="text-muted mt-1">{{ p.created_at }}</div>
+
+            </div>
+
+        </div>
+
+    </div>
+    {% empty %}
+        <div class="alert alert-info">No transactions found.</div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

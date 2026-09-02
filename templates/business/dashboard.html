@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+    <div class="container-fluid px-4">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-building me-2" style="color: #f28c18;"></i>
+                    {{ business.business_name }}
+                </h4>
+                <p class="text-muted small mt-1">
+                    Sales Dashboard - Welcome back, {{ request.user.username }}
+                </p>
+            </div>
+            <div>
+                <a href="{% url 'business_settings' %}" class="btn btn-sm" style="background: #f5f5f5; color: #555;">
+                    <i class="bi bi-gear me-1"></i>
+                    Settings
+                </a>
+            </div>
+        </div>
+
+        <!-- Sales Stats -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Total Revenue</h6>
+                        <h3 class="fw-bold" style="color: #28a745;">TZS {{ total_revenue|floatformat:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Today's Sales</h6>
+                        <h3 class="fw-bold" style="color: #f28c18;">TZS {{ today_revenue|floatformat:0 }}</h3>
+                        <small class="text-muted">{{ today_count }} payments</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">This Week</h6>
+                        <h3 class="fw-bold" style="color: #f28c18;">TZS {{ week_revenue|floatformat:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">This Month</h6>
+                        <h3 class="fw-bold" style="color: #f28c18;">TZS {{ month_revenue|floatformat:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Status -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #d4edda; border-radius: 6px; background: #f0fff4;">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold" style="color: #28a745;">{{ successful_payments }}</h5>
+                        <small class="text-muted">Successful</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #cce5ff; border-radius: 6px; background: #f0f8ff;">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold" style="color: #007bff;">{{ processing_payments }}</h5>
+                        <small class="text-muted">Processing</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #fff3cd; border-radius: 6px; background: #fffcf0;">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold" style="color: #ffc107;">{{ pending_payments }}</h5>
+                        <small class="text-muted">Pending</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="card" style="border: 1px solid #f8d7da; border-radius: 6px; background: #fff5f5;">
+                    <div class="card-body text-center">
+                        <h5 class="fw-bold" style="color: #dc3545;">{{ failed_payments }}</h5>
+                        <small class="text-muted">Failed</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_payments' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-credit-card" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Payments</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_customers' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-people" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Customers</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_packages' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-box" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Packages</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_subscriptions' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-calendar-check" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Subscriptions</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_reports' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-bar-chart" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Reports</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-2 col-sm-4">
+                <a href="{% url 'business_settings' %}" class="text-decoration-none">
+                    <div class="card text-center" style="border: 1px solid #e5e5e5; border-radius: 6px; transition: 0.2s; cursor: pointer;">
+                        <div class="card-body">
+                            <i class="bi bi-gear" style="font-size: 28px; color: #f28c18;"></i>
+                            <h6 class="mt-2 mb-0 small">Settings</h6>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Recent Payments & Customers -->
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold mb-0">
+                                <i class="bi bi-clock-history me-2" style="color: #f28c18;"></i>
+                                Recent Payments
+                            </h6>
+                            <a href="{% url 'business_payments' %}" class="btn btn-sm" style="background: #f28c18; color: white;">
+                                View All
+                            </a>
+                        </div>
+                        
+                        {% if recent_payments %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Reference</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in recent_payments %}
+                                    <tr>
+                                        <td><code>{{ payment.order_reference|truncatechars:8 }}</code></td>
+                                        <td>TZS {{ payment.amount }}</td>
+                                        <td>
+                                            <span class="badge" style="
+                                                background: {% if payment.status == 'PAID' %}#d4edda; color: #155724;
+                                                {% elif payment.status == 'FAILED' %}#f8d7da; color: #721c24;
+                                                {% elif payment.status == 'PROCESSING' %}#cce5ff; color: #004085;
+                                                {% else %}#fff3cd; color: #856404;
+                                                {% endif %}
+                                                padding: 4px 12px; border-radius: 20px;
+                                            ">
+                                                {{ payment.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>{{ payment.created_at|date:"d M H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">No payments yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-person-plus me-2" style="color: #f28c18;"></i>
+                            Recent Customers
+                        </h6>
+                        {% if recent_customers %}
+                        <ul class="list-unstyled">
+                            {% for customer in recent_customers %}
+                            <li class="mb-2">
+                                <a href="{% url 'business_customer_detail' customer.id %}" class="text-decoration-none">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #fafafa; border-radius: 4px;">
+                                        <span>{{ customer.phone_number }}</span>
+                                        <small class="text-muted">{{ customer.date_joined|date:"d M" }}</small>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <a href="{% url 'business_customers' %}" class="btn btn-sm w-100" style="background: #f28c18; color: white;">
+                            View All Customers
+                        </a>
+                        {% else %}
+                        <p class="text-muted text-center py-3">No customers yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

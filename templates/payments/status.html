@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+
+    <div class="container-fluid px-4">
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-check-circle me-2" style="color: #f28c18;"></i>
+                    Payment Status
+                </h4>
+                <p class="text-muted small mt-1">
+                    Track your payment and package activation status
+                </p>
+            </div>
+            <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 8px 16px; border-radius: 20px;">
+                <i class="bi bi-upc-scan me-1"></i>
+                {{ payment.order_reference }}
+            </span>
+        </div>
+
+        <div class="row justify-content-center">
+
+            <div class="col-lg-6 col-md-8">
+
+                <div class="card" style="border: 1px solid #e5e5e5 !important; border-radius: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035) !important;">
+
+                    <div class="card-body" style="padding: 30px;">
+
+                        <!-- Status Icon -->
+                        <div class="text-center mb-4">
+                            {% if payment.status == 'COMPLETED' %}
+                                <div style="width: 80px; height: 80px; background: #d4edda; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-check-circle-fill" style="font-size: 42px; color: #28a745;"></i>
+                                </div>
+                            {% elif payment.status == 'PROCESSING' %}
+                                <div style="width: 80px; height: 80px; background: #cce5ff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-arrow-repeat" style="font-size: 42px; color: #007bff;"></i>
+                                </div>
+                            {% elif payment.status == 'PAID' %}
+                                <div style="width: 80px; height: 80px; background: #d1ecf1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-check2-circle" style="font-size: 42px; color: #17a2b8;"></i>
+                                </div>
+                            {% elif payment.status == 'FAILED' %}
+                                <div style="width: 80px; height: 80px; background: #f8d7da; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-x-circle-fill" style="font-size: 42px; color: #dc3545;"></i>
+                                </div>
+                            {% else %}
+                                <div style="width: 80px; height: 80px; background: #fff3cd; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-hourglass-split" style="font-size: 42px; color: #ffc107;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Status Box -->
+                        <div id="statusBox" class="mb-4">
+                            {% if payment.status == 'COMPLETED' %}
+                                <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #155724;">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        Package Activated Successfully
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #155724; font-size: 14px;">
+                                        Your decoder has been activated. Enjoy your package!
+                                    </p>
+                                </div>
+
+                            {% elif payment.status == 'PROCESSING' %}
+                                <div style="background: #cce5ff; border: 1px solid #b8daff; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #004085;">
+                                        <i class="bi bi-arrow-repeat me-2"></i>
+                                        Processing Your Package
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #004085; font-size: 14px;">
+                                        Your package is being activated. Please wait...
+                                    </p>
+                                </div>
+
+                            {% elif payment.status == 'PAID' %}
+                                <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #0c5460;">
+                                        <i class="bi bi-check2-circle me-2"></i>
+                                        Payment Received
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #0c5460; font-size: 14px;">
+                                        Payment confirmed. Waiting for activation...
+                                    </p>
+                                </div>
+
+                            {% elif payment.status == 'FAILED' %}
+                                <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #721c24;">
+                                        <i class="bi bi-x-circle me-2"></i>
+                                        Payment Failed
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #721c24; font-size: 14px;">
+                                        Your payment could not be processed. Please try again.
+                                    </p>
+                                </div>
+
+                            {% else %}
+                                <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #856404;">
+                                        <i class="bi bi-hourglass-split me-2"></i>
+                                        Waiting for Payment
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #856404; font-size: 14px;">
+                                        Waiting for payment confirmation from ClickPesa...
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Payment Details -->
+                        <div style="background: #fafafa; border-radius: 6px; padding: 20px; border: 1px solid #e5e5e5; margin-bottom: 20px;">
+
+                            <h6 class="fw-bold mb-3" style="color: #333333; font-size: 14px;">
+                                <i class="bi bi-info-circle me-2" style="color: #f28c18;"></i>
+                                Payment Details
+                            </h6>
+
+                            <div class="row g-2" style="font-size: 14px;">
+                                <div class="col-sm-6">
+                                    <span style="color: #777777;">Package:</span>
+                                    <strong style="color: #333333;">{{ payment.package.name }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span style="color: #777777;">Amount:</span>
+                                    <strong style="color: #f28c18;">TZS {{ payment.amount }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span style="color: #777777;">Decoder:</span>
+                                    <strong style="color: #333333;">{{ payment.decoder_number }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span style="color: #777777;">Phone:</span>
+                                    <strong style="color: #333333;">{{ payment.payment_phone }}</strong>
+                                </div>
+                                <div class="col-sm-12">
+                                    <span style="color: #777777;">Reference:</span>
+                                    <strong style="color: #333333;">{{ payment.order_reference }}</strong>
+                                </div>
+                                <div class="col-sm-12">
+                                    <span style="color: #777777;">Date:</span>
+                                    <strong style="color: #333333;">{{ payment.created_at|date:"d M Y H:i" }}</strong>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'dashboard' %}" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;">
+                                <i class="bi bi-house-door me-1"></i>
+                                Back to Dashboard
+                            </a>
+                            <a href="{% url 'payments_list' %}" class="btn" style="background: transparent; border: 1px solid #e5e5e5; color: #555555; padding: 11px; border-radius: 4px; font-weight: 500;">
+                                <i class="bi bi-credit-card me-1"></i>
+                                View All Payments
+                            </a>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Auto Refresh Script -->
+<script>
+setInterval(function () {
+    fetch(window.location.href, {
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+    .then(res => res.text())
+    .then(html => {
+        let parser = new DOMParser();
+        let doc = parser.parseFromString(html, "text/html");
+        let newStatus = doc.querySelector("#statusBox").innerHTML;
+        document.querySelector("#statusBox").innerHTML = newStatus;
+    });
+}, 5000);
+</script>
+
+{% endblock %}

@@ -1,0 +1,434 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="main-content">
+    <div class="container-fluid px-4">
+
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-0" style="color: #333333;">
+                    <i class="bi bi-box me-2" style="color: #f28c18;"></i>
+                    Packages
+                </h4>
+                <p class="text-muted small mt-1">
+                    Manage your packages - Add, Edit, or Delete
+                </p>
+            </div>
+            <div>
+                <button class="btn" style="background: #f28c18; color: white;" onclick="openAddModal()">
+                    <i class="bi bi-plus-circle me-1"></i>
+                    Add Package
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Total Packages</h6>
+                        <h3 class="fw-bold" style="color: #f28c18;">{{ total_packages }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Active Packages</h6>
+                        <h3 class="fw-bold" style="color: #28a745;">{{ active_packages }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Inactive Packages</h6>
+                        <h3 class="fw-bold" style="color: #dc3545;">{{ total_packages|add:"-"|add:active_packages }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Packages Grid -->
+        <div class="row g-4">
+            {% for package in packages %}
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="fw-bold">{{ package.name }}</h5>
+                            <div class="dropdown">
+                                <button class="btn btn-sm" style="background: transparent; border: none;" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="openEditModal({{ package.id }})">
+                                            <i class="bi bi-pencil me-2"></i> Edit
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" onclick="openDeleteModal({{ package.id }}, '{{ package.name }}')">
+                                            <i class="bi bi-trash me-2"></i> Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-muted small">{{ package.description|truncatechars:100|default:"No description" }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge" style="background: #f0f0f0; color: #555;">{{ package.duration_months }} mo</span>
+                                <span class="fw-bold ms-2" style="color: #f28c18;">TZS {{ package.price }}</span>
+                            </div>
+                            <span class="badge" style="background: {% if package.is_active %}#d4edda; color: #155724;{% else %}#f8d7da; color: #721c24;{% endif %}">
+                                {% if package.is_active %}
+                                    <i class="bi bi-check-circle me-1"></i> Active
+                                {% else %}
+                                    <i class="bi bi-x-circle me-1"></i> Inactive
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-box" style="font-size: 48px;"></i>
+                    <h5>No packages available</h5>
+                    <p class="small">Click "Add Package" to create your first package</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+<!-- =========================================================
+     ADD PACKAGE MODAL - FIXED
+========================================================= -->
+<div class="modal fade" id="addPackageModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="max-height: 90vh;">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5; flex-shrink: 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle me-2" style="color: #f28c18;"></i>
+                    Add New Package
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <form id="addPackageForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Package Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="Enter package name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Enter package description"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Price (TZS) <span class="text-danger">*</span></label>
+                            <input type="number" name="price" class="form-control" placeholder="10000" required min="1">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Duration (Months) <span class="text-danger">*</span></label>
+                            <input type="number" name="duration_months" class="form-control" placeholder="1" required min="1">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="addIsActive" checked>
+                            <label class="form-check-label" for="addIsActive">Active</label>
+                        </div>
+                    </div>
+                </form>
+                <div id="addPackageMessage" style="display: none;"></div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" style="background: #f28c18; color: white;" onclick="submitAddPackage()">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Save Package
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     EDIT PACKAGE MODAL - FIXED
+========================================================= -->
+<div class="modal fade" id="editPackageModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="max-height: 90vh;">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5; flex-shrink: 0;">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil me-2" style="color: #f28c18;"></i>
+                    Edit Package
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <form id="editPackageForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="package_id" id="editPackageId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Package Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editName" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" id="editDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Price (TZS) <span class="text-danger">*</span></label>
+                            <input type="number" name="price" id="editPrice" class="form-control" required min="1">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Duration (Months) <span class="text-danger">*</span></label>
+                            <input type="number" name="duration_months" id="editDuration" class="form-control" required min="1">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" name="is_active" id="editIsActive" class="form-check-input">
+                            <label class="form-check-label" for="editIsActive">Active</label>
+                        </div>
+                    </div>
+                </form>
+                <div id="editPackageMessage" style="display: none;"></div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn" style="background: #f28c18; color: white;" onclick="submitEditPackage()">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Update Package
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     DELETE PACKAGE MODAL - FIXED
+========================================================= -->
+<div class="modal fade" id="deletePackageModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="max-height: 90vh;">
+            <div class="modal-header" style="border-bottom: 1px solid #e5e5e5; flex-shrink: 0;">
+                <h5 class="modal-title fw-bold text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Delete Package
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto;">
+                <div class="text-center mb-3">
+                    <i class="bi bi-trash" style="font-size: 48px; color: #dc3545;"></i>
+                </div>
+                <p class="text-center">Are you sure you want to delete <strong id="deletePackageName" style="color: #dc3545;"></strong>?</p>
+                <p class="text-muted small text-center">This action cannot be undone. All data associated with this package will be permanently removed.</p>
+                <form id="deletePackageForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="package_id" id="deletePackageId">
+                </form>
+                <div id="deletePackageMessage" style="display: none;"></div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #e5e5e5; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="submitDeletePackage()">
+                    <i class="bi bi-trash me-1"></i>
+                    Delete Package
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+<script>
+// =========================================================
+// ADD PACKAGE
+// =========================================================
+function openAddModal() {
+    document.getElementById('addPackageForm').reset();
+    document.getElementById('addPackageMessage').style.display = 'none';
+    document.getElementById('addPackageMessage').className = '';
+    var modal = new bootstrap.Modal(document.getElementById('addPackageModal'));
+    modal.show();
+}
+
+function submitAddPackage() {
+    const form = document.getElementById('addPackageForm');
+    const formData = new FormData(form);
+    const messageDiv = document.getElementById('addPackageMessage');
+    
+    fetch("{% url 'business_add_package' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.className = 'alert alert-success mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(function() {
+                location.reload();
+            }, 1500);
+        } else {
+            messageDiv.className = 'alert alert-danger mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
+            messageDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        messageDiv.className = 'alert alert-danger mt-3';
+        messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>An error occurred';
+        messageDiv.style.display = 'block';
+    });
+}
+
+// =========================================================
+// EDIT PACKAGE
+// =========================================================
+function openEditModal(packageId) {
+    const messageDiv = document.getElementById('editPackageMessage');
+    messageDiv.style.display = 'none';
+    messageDiv.className = '';
+    
+    // Fetch package data
+    fetch("{% url 'business_edit_package' 0 %}".replace('0', packageId), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('editPackageId').value = data.id;
+        document.getElementById('editName').value = data.name;
+        document.getElementById('editDescription').value = data.description || '';
+        document.getElementById('editPrice').value = data.price;
+        document.getElementById('editDuration').value = data.duration_months;
+        document.getElementById('editIsActive').checked = data.is_active;
+        
+        var modal = new bootstrap.Modal(document.getElementById('editPackageModal'));
+        modal.show();
+    })
+    .catch(error => {
+        messageDiv.className = 'alert alert-danger mt-3';
+        messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>Failed to load package data';
+        messageDiv.style.display = 'block';
+    });
+}
+
+function submitEditPackage() {
+    const packageId = document.getElementById('editPackageId').value;
+    const form = document.getElementById('editPackageForm');
+    const formData = new FormData(form);
+    const messageDiv = document.getElementById('editPackageMessage');
+    
+    fetch("{% url 'business_edit_package' 0 %}".replace('0', packageId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.className = 'alert alert-success mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(function() {
+                location.reload();
+            }, 1500);
+        } else {
+            messageDiv.className = 'alert alert-danger mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
+            messageDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        messageDiv.className = 'alert alert-danger mt-3';
+        messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>An error occurred';
+        messageDiv.style.display = 'block';
+    });
+}
+
+// =========================================================
+// DELETE PACKAGE
+// =========================================================
+function openDeleteModal(packageId, packageName) {
+    document.getElementById('deletePackageId').value = packageId;
+    document.getElementById('deletePackageName').textContent = packageName;
+    document.getElementById('deletePackageMessage').style.display = 'none';
+    document.getElementById('deletePackageMessage').className = '';
+    
+    var modal = new bootstrap.Modal(document.getElementById('deletePackageModal'));
+    modal.show();
+}
+
+function submitDeletePackage() {
+    const packageId = document.getElementById('deletePackageId').value;
+    const form = document.getElementById('deletePackageForm');
+    const formData = new FormData(form);
+    const messageDiv = document.getElementById('deletePackageMessage');
+    
+    fetch("{% url 'business_delete_package' 0 %}".replace('0', packageId), {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.className = 'alert alert-success mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(function() {
+                location.reload();
+            }, 1500);
+        } else {
+            messageDiv.className = 'alert alert-danger mt-3';
+            messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
+            messageDiv.style.display = 'block';
+        }
+    })
+    .catch(error => {
+        messageDiv.className = 'alert alert-danger mt-3';
+        messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>An error occurred';
+        messageDiv.style.display = 'block';
+    });
+}
+</script>
+
+{% endblock %}
