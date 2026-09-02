@@ -1,228 +1,543 @@
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Load environment variables
+from dotenv import load_dotenv
+import dj_database_url
+
+
+# =============================================================================
+# LOAD ENVIRONMENT VARIABLES
+# =============================================================================
+
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
+# =============================================================================
+# BASE DIRECTORY
+# =============================================================================
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-0ma!tcqt)*u$yc^nx@%+v4n^xt8wt&=-fvejs2&id+$_==a@vm')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# =============================================================================
+# SECURITY
+# =============================================================================
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,.ngrok-free.app,.ngrok-free.dev').split(',')
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-dev-only-change-this-secret-key"
+)
 
-# Application definition
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+
+
+# =============================================================================
+# ALLOWED HOSTS
+# =============================================================================
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1"
+    ).split(",")
+    if host.strip()
+]
+
+
+# =============================================================================
+# APPLICATIONS
+# =============================================================================
+
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
 
-    # 3rd Party Apps
-    'crispy_forms',
-    'corsheaders',
+    # Django
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+
+    # Third Party
+    "crispy_forms",
+    "corsheaders",
 
     # Local Apps
-    'accounts',
-    'packages',
-    'payments',
-    'business',
+    "accounts",
+    "packages",
+    "payments",
+    "business",
 ]
+
+
+# =============================================================================
+# MIDDLEWARE
+# =============================================================================
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS middleware - lazima iwe juu
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    "django.middleware.security.SecurityMiddleware",
+
+    # WhiteNoise - serve static files on Render
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+
+    "django.contrib.sessions.middleware.SessionMiddleware",
+
+    # CORS
+    "corsheaders.middleware.CorsMiddleware",
+
+    "django.middleware.common.CommonMiddleware",
+
+    "django.middleware.csrf.CsrfViewMiddleware",
+
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+
+    "django.contrib.messages.middleware.MessageMiddleware",
+
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'PaymentSystem.urls'
+
+# =============================================================================
+# URL / WSGI
+# =============================================================================
+
+ROOT_URLCONF = "PaymentSystem.urls"
+
+WSGI_APPLICATION = "PaymentSystem.wsgi.application"
+
+
+# =============================================================================
+# TEMPLATES
+# =============================================================================
 
 TEMPLATES = [
+
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+
+        "DIRS": [
+            BASE_DIR / "templates"
+        ],
+
+        "APP_DIRS": True,
+
+        "OPTIONS": {
+
+            "context_processors": [
+
+                "django.template.context_processors.request",
+
+                "django.contrib.auth.context_processors.auth",
+
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'PaymentSystem.wsgi.application'
 
-# Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'paymentsystem'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', '12345678'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+# =============================================================================
+# DATABASE
+# =============================================================================
+#
+# PRODUCTION:
+# Render PostgreSQL -> DATABASE_URL
+#
+# LOCAL:
+# DB_NAME, DB_USER, DB_PASSWORD, DB_HOST, DB_PORT
+#
+# =============================================================================
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+
+if DATABASE_URL:
+
+    # Render / Production PostgreSQL
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=not DEBUG,
+        )
     }
-}
 
-# Password validation
+else:
+
+    # Local PostgreSQL
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+
+            "NAME": os.environ.get(
+                "DB_NAME",
+                "paymentsystem"
+            ),
+
+            "USER": os.environ.get(
+                "DB_USER",
+                "postgres"
+            ),
+
+            "PASSWORD": os.environ.get(
+                "DB_PASSWORD",
+                "12345678"
+            ),
+
+            "HOST": os.environ.get(
+                "DB_HOST",
+                "localhost"
+            ),
+
+            "PORT": os.environ.get(
+                "DB_PORT",
+                "5432"
+            ),
+        }
+    }
+
+
+# =============================================================================
+# PASSWORD VALIDATION
+# =============================================================================
+
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+
+    {
+        "NAME":
+        "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
 ]
 
-# Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Africa/Dar_es_Salaam'
+
+# =============================================================================
+# INTERNATIONALIZATION
+# =============================================================================
+
+LANGUAGE_CODE = "en-us"
+
+TIME_ZONE = "Africa/Dar_es_Salaam"
+
 USE_I18N = True
+
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# =============================================================================
+# STATIC FILES
+# =============================================================================
 
-# Custom User Model
-AUTH_USER_MODEL = 'accounts.User'
-AUTHENTICATION_BACKENDS = [
-    'accounts.backends.PhoneBackend',
-    'django.contrib.auth.backends.ModelBackend',
+STATIC_URL = "/static/"
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static"
 ]
 
-# Authentication redirects
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
 
-# ============================================
+# =============================================================================
+# STATIC FILE STORAGE - WHITENOISE
+# =============================================================================
+
+STORAGES = {
+
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+
+    "staticfiles": {
+        "BACKEND":
+        "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+
+# =============================================================================
+# DEFAULT PRIMARY KEY
+# =============================================================================
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# =============================================================================
+# CUSTOM USER MODEL
+# =============================================================================
+
+AUTH_USER_MODEL = "accounts.User"
+
+
+# =============================================================================
+# AUTHENTICATION BACKENDS
+# =============================================================================
+
+AUTHENTICATION_BACKENDS = [
+
+    "accounts.backends.PhoneBackend",
+
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+
+# =============================================================================
+# LOGIN / LOGOUT
+# =============================================================================
+
+LOGIN_URL = "login"
+
+LOGIN_REDIRECT_URL = "dashboard"
+
+LOGOUT_REDIRECT_URL = "login"
+
+
+# =============================================================================
 # CORS CONFIGURATION
-# ============================================
+# =============================================================================
+
 if DEBUG:
+
     CORS_ALLOW_ALL_ORIGINS = True
+
 else:
+
     CORS_ALLOWED_ORIGINS = [
-        'https://yourdomain.com',
-        'https://www.yourdomain.com',
-        'https://your-frontend.vercel.app',
+        origin.strip()
+        for origin in os.environ.get(
+            "CORS_ALLOWED_ORIGINS",
+            ""
+        ).split(",")
+        if origin.strip()
     ]
 
+
 CORS_ALLOW_CREDENTIALS = True
+
+
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
+
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 ]
 
-# ============================================
+
+CORS_ALLOW_HEADERS = [
+
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+
+# =============================================================================
+# CSRF TRUSTED ORIGINS
+# =============================================================================
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        "CSRF_TRUSTED_ORIGINS",
+        ""
+    ).split(",")
+    if origin.strip()
+]
+
+
+# =============================================================================
 # CLICKPESA CONFIGURATION
-# ============================================
-CLICKPESA_API_KEY = os.environ.get('CLICKPESA_API_KEY')
-CLICKPESA_CLIENT_ID = os.environ.get('CLICKPESA_CLIENT_ID')
-CLICKPESA_API_SECRET = os.environ.get('CLICKPESA_API_SECRET')
-CLICKPESA_BASE_URL = os.environ.get('CLICKPESA_BASE_URL', 'https://api.clickpesa.com/v1')
-CLICKPESA_CALLBACK_URL = os.environ.get(
-    'CLICKPESA_CALLBACK_URL',
-    'https://greeter-copier-connector.ngrok-free.dev/payments/callback/'
+# =============================================================================
+
+CLICKPESA_API_KEY = os.environ.get(
+    "CLICKPESA_API_KEY"
 )
+
+CLICKPESA_CLIENT_ID = os.environ.get(
+    "CLICKPESA_CLIENT_ID"
+)
+
+CLICKPESA_API_SECRET = os.environ.get(
+    "CLICKPESA_API_SECRET"
+)
+
+CLICKPESA_BASE_URL = os.environ.get(
+    "CLICKPESA_BASE_URL",
+    "https://api.clickpesa.com/v1"
+)
+
+CLICKPESA_CALLBACK_URL = os.environ.get(
+    "CLICKPESA_CALLBACK_URL",
+    "http://127.0.0.1:8000/payments/callback/"
+)
+
 CLICKPESA_TIMEOUT = 30
+
 CLICKPESA_MAX_RETRIES = 3
 
-# ============================================
-# SELCOM CONFIGURATION
-# ============================================
-SELCOM_API_KEY = os.environ.get('SELCOM_API_KEY')
-SELCOM_API_SECRET = os.environ.get('SELCOM_API_SECRET')
-SELCOM_BASE_URL = os.environ.get('SELCOM_BASE_URL', 'https://api.selcom.com/v1')
 
-# ============================================
+# =============================================================================
+# SELCOM CONFIGURATION
+# =============================================================================
+
+SELCOM_API_KEY = os.environ.get(
+    "SELCOM_API_KEY"
+)
+
+SELCOM_API_SECRET = os.environ.get(
+    "SELCOM_API_SECRET"
+)
+
+SELCOM_BASE_URL = os.environ.get(
+    "SELCOM_BASE_URL",
+    "https://api.selcom.com/v1"
+)
+
+
+# =============================================================================
 # LOGGING CONFIGURATION
-# ============================================
+# =============================================================================
+#
+# IMPORTANT:
+# Render filesystem sio sehemu nzuri ya kutegemea kwa persistent logs.
+# Tunatumia console logging ili Render iweze kuonyesha logs moja kwa moja.
+#
+# Hii pia inaepusha:
+# FileNotFoundError:
+# /opt/render/project/src/logs/payments.log
+#
+# =============================================================================
+
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+
+    "version": 1,
+
+    "disable_existing_loggers": False,
+
+    "formatters": {
+
+        "verbose": {
+
+            "format":
+            "{levelname} {asctime} {module} "
+            "{process:d} {thread:d} {message}",
+
+            "style": "{",
         },
-        'simple': {
-            'format': '{levelname} {asctime} {message}',
-            'style': '{',
+
+        "simple": {
+
+            "format":
+            "{levelname} {asctime} {message}",
+
+            "style": "{",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/payments.log',
-            'formatter': 'verbose',
+
+    "handlers": {
+
+        "console": {
+
+            "class": "logging.StreamHandler",
+
+            "formatter": "simple",
         },
     },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': True,
+
+    "loggers": {
+
+        "django": {
+
+            "handlers": [
+                "console"
+            ],
+
+            "level": "INFO",
+
+            "propagate": False,
         },
-        'payments': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
+
+        "payments": {
+
+            "handlers": [
+                "console"
+            ],
+
+            "level": "INFO",
+
+            "propagate": False,
         },
-        'clickpesa': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
+
+        "clickpesa": {
+
+            "handlers": [
+                "console"
+            ],
+
+            "level": "DEBUG",
+
+            "propagate": False,
         },
     },
 }
 
-# ============================================
-# SECURITY SETTINGS (Production)
-# ============================================
+
+# =============================================================================
+# PRODUCTION SECURITY SETTINGS
+# =============================================================================
+
 if not DEBUG:
+
+    # Force HTTPS
     SECURE_SSL_REDIRECT = True
+
+    # Secure session cookie
     SESSION_COOKIE_SECURE = True
+
+    # Secure CSRF cookie
     CSRF_COOKIE_SECURE = True
+
+    # Browser security
     SECURE_BROWSER_XSS_FILTER = True
+
     SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
+
+    # Prevent iframe clickjacking
+    X_FRAME_OPTIONS = "DENY"
+
+    # HSTS
     SECURE_HSTS_SECONDS = 31536000
+
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
     SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Render HTTPS proxy
+    SECURE_PROXY_SSL_HEADER = (
+        "HTTP_X_FORWARDED_PROTO",
+        "https",
+    )
