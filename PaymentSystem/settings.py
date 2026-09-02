@@ -507,37 +507,22 @@ LOGGING = {
 
 
 # =============================================================================
-# PRODUCTION SECURITY SETTINGS
+# BASIC SECURITY
 # =============================================================================
 
-if not DEBUG:
+SECURE_BROWSER_XSS_FILTER = False
+SECURE_CONTENT_TYPE_NOSNIFF = False
 
-    # Force HTTPS
-    SECURE_SSL_REDIRECT = True
+X_FRAME_OPTIONS = "SAMEORIGIN"
 
-    # Secure session cookie
-    SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = False
 
-    # Secure CSRF cookie
-    CSRF_COOKIE_SECURE = True
+# Session duration: 8 hours
+SESSION_COOKIE_AGE = 60 * 60 * 8
 
-    # Browser security
-    SECURE_BROWSER_XSS_FILTER = True
-
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-
-    # Prevent iframe clickjacking
-    X_FRAME_OPTIONS = "DENY"
-
-    # HSTS
-    SECURE_HSTS_SECONDS = 31536000
-
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-
-    SECURE_HSTS_PRELOAD = True
-
-    # Render HTTPS proxy
-    SECURE_PROXY_SSL_HEADER = (
-        "HTTP_X_FORWARDED_PROTO",
-        "https",
-    )
+# Render already handles HTTPS at the proxy/load-balancer level.
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
