@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import PasswordChangeForm
 from .models import User
+from .utils import normalize_phone, validate_tanzania_phone
 
 
 class RegisterForm(forms.ModelForm):
@@ -37,11 +38,23 @@ class RegisterForm(forms.ModelForm):
         }
 
     def clean_phone_number(self):
-        """Validate phone number is unique"""
+        """Validate phone number is unique and valid"""
         phone = self.cleaned_data.get('phone_number')
-        if User.objects.filter(phone_number=phone).exists():
+        
+        # Validate Tanzania phone format
+        if not validate_tanzania_phone(phone):
+            raise forms.ValidationError("Invalid Tanzania phone number. Use 07XXXXXXXX or 2557XXXXXXXX")
+        
+        # Normalize phone
+        normalized = normalize_phone(phone)
+        if not normalized:
+            raise forms.ValidationError("Invalid phone number format")
+        
+        # Check if already registered
+        if User.objects.filter(phone_number=normalized).exists():
             raise forms.ValidationError("Phone number already registered")
-        return phone
+        
+        return normalized
 
     def clean(self):
         """Validate passwords match"""
@@ -68,7 +81,7 @@ class RegisterForm(forms.ModelForm):
 
 
 class ProfileForm(forms.ModelForm):
-    """Profile update form"""
+    """Profile update form with phone validation"""
     
     class Meta:
         model = User
@@ -81,10 +94,34 @@ class ProfileForm(forms.ModelForm):
             }),
             "phone_number": forms.TextInput(attrs={
                 "class": "form-control",
-                "placeholder": "Enter phone number",
-                "readonly": True,
+                "placeholder": "Enter phone number (07XXXXXXXX)",
+                # "readonly": True,  # Umeondoa readonly ili kuruhusu kubadilika
             }),
         }
+
+    def clean_phone_number(self):
+        """Validate and normalize phone number"""
+        phone = self.cleaned_data.get('phone_number')
+        
+        if not phone:
+            raise forms.ValidationError("Phone number is required")
+        
+        # Validate Tanzania phone format
+        if not validate_tanzania_phone(phone):
+            raise forms.ValidationError(
+                "Invalid Tanzania phone number. Use format: 07XXXXXXXX or 2557XXXXXXXX"
+            )
+        
+        # Normalize phone number
+        normalized = normalize_phone(phone)
+        if not normalized:
+            raise forms.ValidationError("Invalid phone number format")
+        
+        # Check if phone number is already used by another user
+        if User.objects.exclude(pk=self.instance.pk).filter(phone_number=normalized).exists():
+            raise forms.ValidationError("Phone number already registered to another user")
+        
+        return normalized
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):

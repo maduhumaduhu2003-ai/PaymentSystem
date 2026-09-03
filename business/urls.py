@@ -1,4 +1,3 @@
-# business/urls.py
 from django.urls import path
 from . import views
 
@@ -15,11 +14,10 @@ urlpatterns = [
     # Customers
     path('customers/', views.customers, name='business_customers'),
     path('customer/<int:customer_id>/', views.customer_detail, name='business_customer_detail'),
-    path('customer/<int:customer_id>/', views.customer_detail_json, name='business_customer_json'),
     path('customer/edit/<int:customer_id>/', views.edit_customer, name='business_edit_customer'),
     path('customer/deactivate/<int:customer_id>/', views.deactivate_customer, name='business_deactivate_customer'),
     
-    # Packages - Manage
+    # Packages
     path('packages/', views.packages, name='business_packages'),
     path('packages/add/', views.add_package, name='business_add_package'),
     path('packages/edit/<int:package_id>/', views.edit_package, name='business_edit_package'),

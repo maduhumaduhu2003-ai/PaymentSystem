@@ -238,12 +238,18 @@ function openCustomerDetail(customerId) {
     
     modal.show();
     
+    // ✅ TUMIA URL SAHIHI - Hii inatumia customer_detail view
     fetch(`/business/customer/${customerId}/`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             content.innerHTML = `
@@ -296,10 +302,11 @@ function openCustomerDetail(customerId) {
         `;
     })
     .catch(error => {
+        console.error('Error:', error);
         content.innerHTML = `
             <div class="alert alert-danger">
                 <i class="bi bi-exclamation-circle me-2"></i>
-                Failed to load customer details
+                Failed to load customer details. Please try again.
             </div>
         `;
     });
@@ -313,12 +320,18 @@ function openEditCustomer(customerId) {
     messageDiv.style.display = 'none';
     messageDiv.className = '';
     
+    // ✅ TUMIA URL SAHIHI - Hii inatumia customer_detail view
     fetch(`/business/customer/${customerId}/`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             messageDiv.className = 'alert alert-danger mt-3';
@@ -337,6 +350,7 @@ function openEditCustomer(customerId) {
         modal.show();
     })
     .catch(error => {
+        console.error('Error:', error);
         messageDiv.className = 'alert alert-danger mt-3';
         messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>Failed to load customer data';
         messageDiv.style.display = 'block';
@@ -351,6 +365,14 @@ function submitEditCustomer() {
     const form = document.getElementById('editCustomerForm');
     const formData = new FormData(form);
     const messageDiv = document.getElementById('editCustomerMessage');
+    
+    // Add CSRF token if not in form
+    if (!formData.has('csrfmiddlewaretoken')) {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrf) {
+            formData.append('csrfmiddlewaretoken', csrf.value);
+        }
+    }
     
     fetch(`/business/customer/edit/${customerId}/`, {
         method: 'POST',
@@ -371,11 +393,12 @@ function submitEditCustomer() {
             }, 1500);
         } else {
             messageDiv.className = 'alert alert-danger mt-3';
-            messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
+            messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + (data.error || 'An error occurred');
             messageDiv.style.display = 'block';
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         messageDiv.className = 'alert alert-danger mt-3';
         messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>An error occurred';
         messageDiv.style.display = 'block';
@@ -392,7 +415,10 @@ function deactivateCustomer(customerId, phoneNumber) {
     
     const formData = new FormData();
     formData.append('action', 'deactivate');
-    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrf) {
+        formData.append('csrfmiddlewaretoken', csrf.value);
+    }
     
     fetch(`/business/customer/deactivate/${customerId}/`, {
         method: 'POST',
@@ -404,15 +430,7 @@ function deactivateCustomer(customerId, phoneNumber) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="bi bi-check-circle me-2"></i>
-                ${data.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.main-content').prepend(alertDiv);
-            
+            showAlert('success', data.message);
             setTimeout(() => {
                 location.reload();
             }, 1500);
@@ -421,6 +439,7 @@ function deactivateCustomer(customerId, phoneNumber) {
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         alert('An error occurred. Please try again.');
     });
 }
@@ -435,7 +454,10 @@ function activateCustomer(customerId, phoneNumber) {
     
     const formData = new FormData();
     formData.append('action', 'activate');
-    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrf) {
+        formData.append('csrfmiddlewaretoken', csrf.value);
+    }
     
     fetch(`/business/customer/deactivate/${customerId}/`, {
         method: 'POST',
@@ -447,15 +469,7 @@ function activateCustomer(customerId, phoneNumber) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="bi bi-check-circle me-2"></i>
-                ${data.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.main-content').prepend(alertDiv);
-            
+            showAlert('success', data.message);
             setTimeout(() => {
                 location.reload();
             }, 1500);
@@ -464,8 +478,26 @@ function activateCustomer(customerId, phoneNumber) {
         }
     })
     .catch(error => {
+        console.error('Error:', error);
         alert('An error occurred. Please try again.');
     });
+}
+
+// =========================================================
+// SHOW ALERT HELPER
+// =========================================================
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    const mainContent = document.querySelector('.main-content');
+    if (mainContent) {
+        mainContent.prepend(alertDiv);
+    }
 }
 </script>
 

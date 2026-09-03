@@ -20,12 +20,10 @@ from .models import Business, BusinessPayment
 def dashboard(request):
     """Business Owner Dashboard - View sales"""
     
-    # Check if user is business owner
     if not request.user.is_business_owner:
         messages.error(request, "Access denied. Business owners only.")
         return redirect('/packages/')
     
-    # Get or create business profile
     business, created = Business.objects.get_or_create(
         user=request.user,
         defaults={
@@ -34,65 +32,25 @@ def dashboard(request):
         }
     )
     
-    # ==========================================
-    # SALES STATISTICS
-    # ==========================================
-    
-    # Total sales
-    total_sales = Payment.objects.count()
-    total_revenue = Payment.objects.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    # Today's sales
     today = timezone.now().date()
     today_sales = Payment.objects.filter(created_at__date=today)
-    today_revenue = today_sales.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    today_count = today_sales.count()
-    
-    # This week's sales
     week_start = today - timedelta(days=today.weekday())
-    week_sales = Payment.objects.filter(created_at__date__gte=week_start)
-    week_revenue = week_sales.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    # This month's sales
     month_start = today.replace(day=1)
-    month_sales = Payment.objects.filter(created_at__date__gte=month_start)
-    month_revenue = month_sales.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    # Payment status breakdown
-    successful_payments = Payment.objects.filter(status='PAID').count()
-    failed_payments = Payment.objects.filter(status='FAILED').count()
-    pending_payments = Payment.objects.filter(status='PENDING').count()
-    processing_payments = Payment.objects.filter(status='PROCESSING').count()
-    
-    # Recent payments
-    recent_payments = Payment.objects.all().order_by('-created_at')[:10]
-    
-    # Recent customers
-    from accounts.models import User
-    recent_customers = User.objects.filter(role='customer').order_by('-date_joined')[:5]
     
     context = {
         'business': business,
-        'total_sales': total_sales,
-        'total_revenue': total_revenue,
-        'today_revenue': today_revenue,
-        'today_count': today_count,
-        'week_revenue': week_revenue,
-        'month_revenue': month_revenue,
-        'successful_payments': successful_payments,
-        'failed_payments': failed_payments,
-        'pending_payments': pending_payments,
-        'processing_payments': processing_payments,
-        'recent_payments': recent_payments,
-        'recent_customers': recent_customers,
+        'total_sales': Payment.objects.count(),
+        'total_revenue': Payment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'today_revenue': today_sales.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'today_count': today_sales.count(),
+        'week_revenue': Payment.objects.filter(created_at__date__gte=week_start, status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'month_revenue': Payment.objects.filter(created_at__date__gte=month_start, status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'successful_payments': Payment.objects.filter(status='PAID').count(),
+        'failed_payments': Payment.objects.filter(status='FAILED').count(),
+        'pending_payments': Payment.objects.filter(status='PENDING').count(),
+        'processing_payments': Payment.objects.filter(status='PROCESSING').count(),
+        'recent_payments': Payment.objects.all().order_by('-created_at')[:10],
+        'recent_customers': User.objects.filter(role='customer').order_by('-date_joined')[:5],
     }
     
     return render(request, 'business/dashboard.html', context)
@@ -102,7 +60,6 @@ def dashboard(request):
 # BUSINESS PAYMENTS - View payments
 # ============================================================================
 
-
 @login_required
 def payments(request):
     """Business Owner - View all payments"""
@@ -110,10 +67,8 @@ def payments(request):
     if not request.user.is_business_owner:
         return HttpResponseForbidden("Access denied")
     
-    # Get all payments with filtering
     payment_list = Payment.objects.all().order_by('-created_at')
     
-    # Filters
     status_filter = request.GET.get('status')
     if status_filter:
         payment_list = payment_list.filter(status=status_filter)
@@ -130,7 +85,6 @@ def payments(request):
             Q(user__phone_number__icontains=search_query)
         )
     
-    # Pagination
     paginator = Paginator(payment_list, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -146,10 +100,9 @@ def payments(request):
     return render(request, 'business/payments.html', context)
 
 
-
 @login_required
 def payment_detail(request, payment_id):
-    """Business Owner - View payment details (HTML or JSON)"""
+    """Business Owner - View payment details"""
     
     if not request.user.is_business_owner:
         return HttpResponseForbidden("Access denied")
@@ -167,7 +120,6 @@ def payment_detail(request, payment_id):
         business_payment.viewed_at = timezone.now()
         business_payment.save()
     
-    # If AJAX request, return JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'id': payment.id,
@@ -185,34 +137,24 @@ def payment_detail(request, payment_id):
             'processed_at': payment.processed_at.strftime('%d %b %Y %H:%M') if payment.processed_at else None,
         })
     
-    # HTML response for non-AJAX
-    context = {
-        'payment': payment,
-    }
-    
+    context = {'payment': payment}
     return render(request, 'business/payment_detail.html', context)
 
 
-# ============================================================================
-# BUSINESS MARK PAYMENT AS READY
-# ============================================================================
-
 @login_required
 def mark_payment_ready(request, payment_id):
-    """Business Owner - Mark payment as READY (completed)"""
+    """Business Owner - Mark payment as READY"""
     
     if not request.user.is_business_owner:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
     payment = get_object_or_404(Payment, id=payment_id)
     
-    # Only allow if payment is PAID
     if payment.status != 'PAID':
         return JsonResponse({
             'error': 'Payment must be PAID before marking as READY'
         }, status=400)
     
-    # Mark as COMPLETED (READY)
     payment.status = 'COMPLETED'
     payment.completed_at = timezone.now()
     payment.save()
@@ -238,7 +180,6 @@ def customers(request):
     from accounts.models import User
     customers_list = User.objects.filter(role='customer').order_by('-date_joined')
     
-    # Search
     search_query = request.GET.get('search')
     if search_query:
         customers_list = customers_list.filter(
@@ -246,19 +187,14 @@ def customers(request):
             Q(username__icontains=search_query)
         )
     
-    # Pagination
     paginator = Paginator(customers_list, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Customer stats
-    total_customers = customers_list.count()
-    active_customers = customers_list.filter(is_active=True).count()
-    
     context = {
         'page_obj': page_obj,
-        'total_customers': total_customers,
-        'active_customers': active_customers,
+        'total_customers': customers_list.count(),
+        'active_customers': customers_list.filter(is_active=True).count(),
         'search_query': search_query,
     }
     
@@ -266,62 +202,46 @@ def customers(request):
 
 
 # ============================================================================
-# BUSINESS CUSTOMER DETAIL (display data on dashboard)
+# BUSINESS CUSTOMER DETAIL (HTML & JSON)
 # ============================================================================
 
 @login_required
 def customer_detail(request, customer_id):
-    """Business Owner - View customer details with their payments"""
+    """Business Owner - View customer details (HTML or JSON)"""
     
     if not request.user.is_business_owner:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Access denied'}, status=403)
         return HttpResponseForbidden("Access denied")
     
     from accounts.models import User
     customer = get_object_or_404(User, id=customer_id, role='customer')
+    
+    # ✅ Kama ni AJAX request, rudi JSON (kwa modal)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'id': customer.id,
+            'phone_number': customer.phone_number,
+            'username': customer.username or 'N/A',
+            'email': customer.email or 'N/A',
+            'is_active': customer.is_active,
+            'date_joined': customer.date_joined.strftime('%d %b %Y %H:%M'),
+            'last_login': customer.last_login.strftime('%d %b %Y %H:%M') if customer.last_login else 'Never',
+            'role': customer.role,
+        })
+    
+    # ✅ Kama ni HTML request, rudi page
     customer_payments = Payment.objects.filter(user=customer).order_by('-created_at')
-    
-    # Customer stats
-    total_spent = customer_payments.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    total_payments = customer_payments.count()
-    successful_payments = customer_payments.filter(status='PAID').count()
     
     context = {
         'customer': customer,
-        'customer_payments': customer_payments,
-        'total_spent': total_spent,
-        'total_payments': total_payments,
-        'successful_payments': successful_payments,
+        'customer_payments': customer_payments[:20],
+        'total_spent': customer_payments.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'total_payments': customer_payments.count(),
+        'successful_payments': customer_payments.filter(status='PAID').count(),
     }
     
     return render(request, 'business/customer_detail.html', context)
-
-# ============================================================================
-# BUSINESS CUSTOMER DETAIL (JSON for Modal)
-# ============================================================================
-
-@login_required
-def customer_detail_json(request, customer_id):
-    """Business Owner - Get customer details as JSON"""
-    
-    if not request.user.is_business_owner:
-        return JsonResponse({'error': 'Access denied'}, status=403)
-    
-    from accounts.models import User
-    customer = get_object_or_404(User, id=customer_id, role='customer')
-    
-    return JsonResponse({
-        'id': customer.id,
-        'phone_number': customer.phone_number,
-        'username': customer.username or 'N/A',
-        'email': customer.email or 'N/A',
-        'is_active': customer.is_active,
-        'date_joined': customer.date_joined.strftime('%d %b %Y %H:%M'),
-        'last_login': customer.last_login.strftime('%d %b %Y %H:%M') if customer.last_login else 'Never',
-        'role': customer.role,
-    })
 
 
 # ============================================================================
@@ -343,11 +263,9 @@ def edit_customer(request, customer_id):
         email = request.POST.get('email', '').strip()
         is_active = request.POST.get('is_active') == 'on'
         
-        # Validate
         if not username:
             return JsonResponse({'error': 'Username is required'}, status=400)
         
-        # Update customer
         customer.username = username
         customer.email = email
         customer.is_active = is_active
@@ -369,12 +287,12 @@ def edit_customer(request, customer_id):
 
 
 # ============================================================================
-# BUSINESS DEACTIVATE CUSTOMER
+# BUSINESS DEACTIVATE/ACTIVATE CUSTOMER
 # ============================================================================
 
 @login_required
 def deactivate_customer(request, customer_id):
-    """Business Owner - Deactivate customer"""
+    """Business Owner - Deactivate or activate customer"""
     
     if not request.user.is_business_owner:
         return JsonResponse({'error': 'Access denied'}, status=403)
@@ -417,20 +335,15 @@ def packages(request):
         return HttpResponseForbidden("Access denied")
     
     all_packages = Package.objects.all().order_by('-created_at')
-    active_packages = all_packages.filter(is_active=True).count()
     
     context = {
         'packages': all_packages,
         'total_packages': all_packages.count(),
-        'active_packages': active_packages,
+        'active_packages': all_packages.filter(is_active=True).count(),
     }
     
     return render(request, 'business/packages.html', context)
 
-
-# ============================================================================
-# BUSINESS ADD PACKAGE (Modal/Popup) - FIXED
-# ============================================================================
 
 @login_required
 def add_package(request):
@@ -446,17 +359,15 @@ def add_package(request):
         duration_months = request.POST.get('duration_months', '').strip()
         is_active = request.POST.get('is_active') == 'on'
         
-        # Validate
         if not name:
             return JsonResponse({'error': 'Package name is required'}, status=400)
         
-        # FIXED: Allow decimal numbers (e.g., 10000.00)
         try:
             price_value = float(price)
             if price_value <= 0:
                 return JsonResponse({'error': 'Price must be greater than 0'}, status=400)
         except ValueError:
-            return JsonResponse({'error': 'Valid price is required (e.g., 10000 or 10000.50)'}, status=400)
+            return JsonResponse({'error': 'Valid price is required'}, status=400)
         
         try:
             duration = int(duration_months)
@@ -465,7 +376,6 @@ def add_package(request):
         except ValueError:
             return JsonResponse({'error': 'Valid duration is required'}, status=400)
         
-        # Create package
         package = Package.objects.create(
             name=name,
             description=description,
@@ -490,10 +400,6 @@ def add_package(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-# ============================================================================
-# BUSINESS EDIT PACKAGE (Modal/Popup) - FIXED
-# ============================================================================
-
 @login_required
 def edit_package(request, package_id):
     """Business Owner - Edit package via modal"""
@@ -510,17 +416,15 @@ def edit_package(request, package_id):
         duration_months = request.POST.get('duration_months', '').strip()
         is_active = request.POST.get('is_active') == 'on'
         
-        # Validate
         if not name:
             return JsonResponse({'error': 'Package name is required'}, status=400)
         
-        # FIXED: Allow decimal numbers (e.g., 10000.00)
         try:
             price_value = float(price)
             if price_value <= 0:
                 return JsonResponse({'error': 'Price must be greater than 0'}, status=400)
         except ValueError:
-            return JsonResponse({'error': 'Valid price is required (e.g., 10000 or 10000.50)'}, status=400)
+            return JsonResponse({'error': 'Valid price is required'}, status=400)
         
         try:
             duration = int(duration_months)
@@ -529,7 +433,6 @@ def edit_package(request, package_id):
         except ValueError:
             return JsonResponse({'error': 'Valid duration is required'}, status=400)
         
-        # Update package
         package.name = name
         package.description = description
         package.price = price_value
@@ -550,7 +453,6 @@ def edit_package(request, package_id):
             }
         })
     
-    # GET request - return package data for modal
     return JsonResponse({
         'id': package.id,
         'name': package.name,
@@ -560,10 +462,6 @@ def edit_package(request, package_id):
         'is_active': package.is_active,
     })
 
-
-# ============================================================================
-# BUSINESS DELETE PACKAGE (Modal/Popup)
-# ============================================================================
 
 @login_required
 def delete_package(request, package_id):
@@ -597,27 +495,21 @@ def subscriptions(request):
     if not request.user.is_business_owner:
         return HttpResponseForbidden("Access denied")
     
-    # Get all payments that are active subscriptions
     subscriptions = Payment.objects.filter(
         status__in=['PAID', 'COMPLETED']
     ).order_by('-created_at')
     
-    # Filters
     package_filter = request.GET.get('package')
     if package_filter:
         subscriptions = subscriptions.filter(package__id=package_filter)
     
-    # Pagination
     paginator = Paginator(subscriptions, 20)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Packages for filter
-    packages = Package.objects.all()
-    
     context = {
         'page_obj': page_obj,
-        'packages': packages,
+        'packages': Package.objects.all(),
         'package_filter': package_filter,
         'total_subscriptions': subscriptions.count(),
     }
@@ -638,61 +530,35 @@ def reports(request):
     
     from django.db.models.functions import TruncMonth, TruncDay
     
-    # Monthly revenue
-    monthly_revenue = Payment.objects.filter(
-        status='PAID'
-    ).annotate(
-        month=TruncMonth('created_at')
-    ).values('month').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('-month')
-    
-    # Daily revenue (last 30 days)
     thirty_days_ago = timezone.now() - timedelta(days=30)
-    daily_revenue = Payment.objects.filter(
-        status='PAID',
-        created_at__gte=thirty_days_ago
-    ).annotate(
-        day=TruncDay('created_at')
-    ).values('day').annotate(
-        total=Sum('amount'),
-        count=Count('id')
-    ).order_by('day')
-    
-    # Payment status breakdown
-    status_breakdown = Payment.objects.values('status').annotate(
-        count=Count('id')
-    )
-    
-    # Total revenue
-    total_revenue = Payment.objects.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    # Today's payments
     today = timezone.now().date()
     today_payments = Payment.objects.filter(created_at__date=today)
-    today_revenue = today_payments.filter(status='PAID').aggregate(
-        total=Sum('amount')
-    )['total'] or 0
-    
-    # Top customers
-    from accounts.models import User
-    top_customers = User.objects.filter(
-        role='customer'
-    ).annotate(
-        total_spent=Sum('payment__amount', filter=Q(payment__status='PAID'))
-    ).order_by('-total_spent')[:10]
     
     context = {
-        'monthly_revenue': monthly_revenue,
-        'daily_revenue': daily_revenue,
-        'status_breakdown': status_breakdown,
-        'total_revenue': total_revenue,
-        'today_revenue': today_revenue,
+        'monthly_revenue': Payment.objects.filter(status='PAID').annotate(
+            month=TruncMonth('created_at')
+        ).values('month').annotate(
+            total=Sum('amount'),
+            count=Count('id')
+        ).order_by('-month'),
+        
+        'daily_revenue': Payment.objects.filter(
+            status='PAID',
+            created_at__gte=thirty_days_ago
+        ).annotate(
+            day=TruncDay('created_at')
+        ).values('day').annotate(
+            total=Sum('amount'),
+            count=Count('id')
+        ).order_by('day'),
+        
+        'status_breakdown': Payment.objects.values('status').annotate(count=Count('id')),
+        'total_revenue': Payment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
+        'today_revenue': today_payments.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
         'today_payments_count': today_payments.count(),
-        'top_customers': top_customers,
+        'top_customers': User.objects.filter(role='customer').annotate(
+            total_spent=Sum('payment__amount', filter=Q(payment__status='PAID'))
+        ).order_by('-total_spent')[:10],
     }
     
     return render(request, 'business/reports.html', context)
@@ -727,8 +593,5 @@ def settings(request):
         messages.success(request, "Business settings updated successfully!")
         return redirect('business_settings')
     
-    context = {
-        'business': business,
-    }
-    
+    context = {'business': business}
     return render(request, 'business/settings.html', context)
