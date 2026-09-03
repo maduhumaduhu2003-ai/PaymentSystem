@@ -160,7 +160,7 @@ if DATABASE_URL:
         "default": dj_database_url.parse(
             DATABASE_URL,
             conn_max_age=600,
-            ssl_require=not DEBUG,
+            ssl_require=True,  # Changed to True for production
         )
     }
 
@@ -321,7 +321,7 @@ else:
         origin.strip()
         for origin in os.environ.get(
             "CORS_ALLOWED_ORIGINS",
-            ""
+            "https://satpay.onrender.com,https://*.onrender.com"
         ).split(",")
         if origin.strip()
     ]
@@ -363,7 +363,7 @@ CSRF_TRUSTED_ORIGINS = [
     origin.strip()
     for origin in os.environ.get(
         "CSRF_TRUSTED_ORIGINS",
-        ""
+        "https://satpay.onrender.com,https://*.onrender.com,http://localhost:8000"
     ).split(",")
     if origin.strip()
 ]
@@ -392,7 +392,7 @@ CLICKPESA_BASE_URL = os.environ.get(
 
 CLICKPESA_CALLBACK_URL = os.environ.get(
     "CLICKPESA_CALLBACK_URL",
-    "http://127.0.0.1:8000/payments/callback/"
+    "https://satpay.onrender.com/payments/callback/"
 )
 
 CLICKPESA_TIMEOUT = 30
