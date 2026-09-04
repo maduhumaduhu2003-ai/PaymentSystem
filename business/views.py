@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from packages.models import Package
 from payments.models import Payment
 from .models import Business, BusinessPayment
+from accounts.models import User  # ← IMPORTANT: HII NDIO ILIKOSA
 
 
 # ============================================================================
@@ -50,7 +51,7 @@ def dashboard(request):
         'pending_payments': Payment.objects.filter(status='PENDING').count(),
         'processing_payments': Payment.objects.filter(status='PROCESSING').count(),
         'recent_payments': Payment.objects.all().order_by('-created_at')[:10],
-        'recent_customers': User.objects.filter(role='customer').order_by('-date_joined')[:5],
+        'recent_customers': User.objects.filter(role='customer').order_by('-date_joined')[:5],  # ← Sasa inafanya kazi
     }
     
     return render(request, 'business/dashboard.html', context)
@@ -177,7 +178,6 @@ def customers(request):
     if not request.user.is_business_owner:
         return HttpResponseForbidden("Access denied")
     
-    from accounts.models import User
     customers_list = User.objects.filter(role='customer').order_by('-date_joined')
     
     search_query = request.GET.get('search')
@@ -214,10 +214,9 @@ def customer_detail(request, customer_id):
             return JsonResponse({'error': 'Access denied'}, status=403)
         return HttpResponseForbidden("Access denied")
     
-    from accounts.models import User
     customer = get_object_or_404(User, id=customer_id, role='customer')
     
-    # ✅ Kama ni AJAX request, rudi JSON (kwa modal)
+    # Kama ni AJAX request, rudi JSON (kwa modal)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'id': customer.id,
@@ -230,7 +229,7 @@ def customer_detail(request, customer_id):
             'role': customer.role,
         })
     
-    # ✅ Kama ni HTML request, rudi page
+    # Kama ni HTML request, rudi page
     customer_payments = Payment.objects.filter(user=customer).order_by('-created_at')
     
     context = {
@@ -255,7 +254,6 @@ def edit_customer(request, customer_id):
     if not request.user.is_business_owner:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
-    from accounts.models import User
     customer = get_object_or_404(User, id=customer_id, role='customer')
     
     if request.method == 'POST':
@@ -297,7 +295,6 @@ def deactivate_customer(request, customer_id):
     if not request.user.is_business_owner:
         return JsonResponse({'error': 'Access denied'}, status=403)
     
-    from accounts.models import User
     customer = get_object_or_404(User, id=customer_id, role='customer')
     
     if request.method == 'POST':
@@ -556,7 +553,7 @@ def reports(request):
         'total_revenue': Payment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
         'today_revenue': today_payments.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
         'today_payments_count': today_payments.count(),
-        'top_customers': User.objects.filter(role='customer').annotate(
+        'top_customers': User.objects.filter(role='customer').annotate(  # ← Sasa inafanya kazi
             total_spent=Sum('payment__amount', filter=Q(payment__status='PAID'))
         ).order_by('-total_spent')[:10],
     }
