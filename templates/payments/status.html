@@ -49,9 +49,13 @@
                                 <div style="width: 80px; height: 80px; background: #f8d7da; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
                                     <i class="bi bi-x-circle-fill" style="font-size: 42px; color: #dc3545;"></i>
                                 </div>
-                            {% else %}
+                            {% elif payment.status == 'REVIEW' %}
                                 <div style="width: 80px; height: 80px; background: #fff3cd; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-                                    <i class="bi bi-hourglass-split" style="font-size: 42px; color: #ffc107;"></i>
+                                    <i class="bi bi-exclamation-triangle-fill" style="font-size: 42px; color: #ffc107;"></i>
+                                </div>
+                            {% else %}
+                                <div style="width: 80px; height: 80px; background: #e9ecef; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="bi bi-hourglass-split" style="font-size: 42px; color: #6c757d;"></i>
                                 </div>
                             {% endif %}
                         </div>
@@ -102,17 +106,36 @@
                                     </p>
                                 </div>
 
-                            {% else %}
+                            {% elif payment.status == 'REVIEW' %}
                                 <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 16px 20px; text-align: center;">
                                     <h5 class="mb-0" style="color: #856404;">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>
+                                        Payment Requires Review
+                                    </h5>
+                                    <p class="mb-0 mt-1" style="color: #856404; font-size: 14px;">
+                                        Your payment is under review. Please contact support.
+                                    </p>
+                                </div>
+
+                            {% else %}
+                                <div style="background: #e9ecef; border: 1px solid #dee2e6; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                                    <h5 class="mb-0" style="color: #6c757d;">
                                         <i class="bi bi-hourglass-split me-2"></i>
                                         Waiting for Payment
                                     </h5>
-                                    <p class="mb-0 mt-1" style="color: #856404; font-size: 14px;">
+                                    <p class="mb-0 mt-1" style="color: #6c757d; font-size: 14px;">
                                         Waiting for payment confirmation from ClickPesa...
                                     </p>
                                 </div>
                             {% endif %}
+                        </div>
+
+                        <!-- Retry Status Message -->
+                        <div id="retryMessage" class="mb-3 text-center" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="bi bi-arrow-repeat spinner-border spinner-border-sm me-2"></i>
+                                Sending USSD Push again...
+                            </div>
                         </div>
 
                         <!-- Payment Details -->
@@ -148,12 +171,26 @@
                                     <span style="color: #777777;">Date:</span>
                                     <strong style="color: #333333;">{{ payment.created_at|date:"d M Y H:i" }}</strong>
                                 </div>
+                                {% if payment.transaction_id %}
+                                <div class="col-sm-12">
+                                    <span style="color: #777777;">Transaction ID:</span>
+                                    <strong style="color: #333333;">{{ payment.transaction_id }}</strong>
+                                </div>
+                                {% endif %}
                             </div>
 
                         </div>
 
                         <!-- Buttons -->
                         <div class="d-grid gap-2">
+                            <!-- Retry Button - Only for PENDING or FAILED -->
+                            {% if payment.status == 'PENDING' or payment.status == 'FAILED' %}
+                            <button id="retryBtn" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;" onclick="retryPayment()">
+                                <i class="bi bi-arrow-repeat me-1"></i>
+                                Retry Payment
+                            </button>
+                            {% endif %}
+
                             <a href="{% url 'dashboard' %}" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;">
                                 <i class="bi bi-house-door me-1"></i>
                                 Back to Dashboard
@@ -176,20 +213,267 @@
 
 </div>
 
+<!-- =========================================================
+     RETRY SCRIPT - FIXED
+========================================================= -->
+
+<script>
+function retryPayment() {
+    const retryBtn = document.getElementById('retryBtn');
+    const retryMessage = document.getElementById('retryMessage');
+    const statusBox = document.getElementById('statusBox');
+    
+    // Disable button
+    retryBtn.disabled = true;
+    retryBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Sending...';
+    
+    // Show message
+    retryMessage.style.display = 'block';
+    
+    // ✅ FIXED: Get CSRF token from cookie
+    function getCSRFToken() {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, 10) === 'csrftoken=') {
+                    cookieValue = decodeURIComponent(cookie.substring(10));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    const csrfToken = getCSRFToken();
+    
+    // ✅ FIXED: Send retry request with correct CSRF token
+    fetch("{% url 'retry_payment' payment.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
+    .then(response => response.json())
+    .then(data => {
+        retryMessage.style.display = 'none';
+        
+        if (data.success) {
+            // Update status
+            updateStatusBox('PROCESSING');
+            updateStatusIcon('PROCESSING');
+            
+            statusBox.innerHTML = `
+                <div style="background: #cce5ff; border: 1px solid #b8daff; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                    <h5 class="mb-0" style="color: #004085;">
+                        <i class="bi bi-check-circle me-2"></i>
+                        ${data.message}
+                    </h5>
+                </div>
+            `;
+            
+            retryBtn.style.display = 'none';
+        } else {
+            statusBox.innerHTML = `
+                <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                    <h5 class="mb-0" style="color: #721c24;">
+                        <i class="bi bi-x-circle me-2"></i>
+                        ${data.message || 'Payment failed. Please try again.'}
+                    </h5>
+                </div>
+            `;
+            
+            retryBtn.disabled = false;
+            retryBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Retry Payment';
+        }
+    })
+    .catch(error => {
+        retryMessage.style.display = 'none';
+        retryBtn.disabled = false;
+        retryBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Retry Payment';
+        alert('Failed to send retry. Please try again.');
+    });
+}
+
+// Update status box
+function updateStatusBox(status) {
+    const statusBox = document.getElementById('statusBox');
+    if (!statusBox) return;
+    
+    let html = '';
+    
+    if (status === 'COMPLETED') {
+        html = `
+            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #155724;">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Package Activated Successfully
+                </h5>
+                <p class="mb-0 mt-1" style="color: #155724; font-size: 14px;">
+                    Your decoder has been activated. Enjoy your package!
+                </p>
+            </div>
+        `;
+    } else if (status === 'PAID') {
+        html = `
+            <div style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #0c5460;">
+                    <i class="bi bi-check2-circle me-2"></i>
+                    Payment Received
+                </h5>
+                <p class="mb-0 mt-1" style="color: #0c5460; font-size: 14px;">
+                    Payment confirmed. Waiting for activation...
+                </p>
+            </div>
+        `;
+    } else if (status === 'FAILED') {
+        html = `
+            <div style="background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #721c24;">
+                    <i class="bi bi-x-circle me-2"></i>
+                    Payment Failed
+                </h5>
+                <p class="mb-0 mt-1" style="color: #721c24; font-size: 14px;">
+                    Your payment could not be processed. Please try again.
+                </p>
+            </div>
+        `;
+    } else if (status === 'REVIEW') {
+        html = `
+            <div style="background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #856404;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Payment Requires Review
+                </h5>
+                <p class="mb-0 mt-1" style="color: #856404; font-size: 14px;">
+                    Your payment is under review. Please contact support.
+                </p>
+            </div>
+        `;
+    } else if (status === 'PROCESSING') {
+        html = `
+            <div style="background: #cce5ff; border: 1px solid #b8daff; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #004085;">
+                    <i class="bi bi-arrow-repeat me-2"></i>
+                    Processing Your Package
+                </h5>
+                <p class="mb-0 mt-1" style="color: #004085; font-size: 14px;">
+                    Your package is being activated. Please wait...
+                </p>
+            </div>
+        `;
+    } else {
+        html = `
+            <div style="background: #e9ecef; border: 1px solid #dee2e6; border-radius: 6px; padding: 16px 20px; text-align: center;">
+                <h5 class="mb-0" style="color: #6c757d;">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    Waiting for Payment
+                </h5>
+                <p class="mb-0 mt-1" style="color: #6c757d; font-size: 14px;">
+                    Waiting for payment confirmation from ClickPesa...
+                </p>
+            </div>
+        `;
+    }
+    
+    statusBox.innerHTML = html;
+}
+
+// Update status icon
+function updateStatusIcon(status) {
+    const iconContainer = document.querySelector('.text-center.mb-4 > div');
+    if (!iconContainer) return;
+    
+    let bgColor = '#e9ecef';
+    let iconColor = '#6c757d';
+    let iconClass = 'bi-hourglass-split';
+    
+    if (status === 'COMPLETED') {
+        bgColor = '#d4edda';
+        iconColor = '#28a745';
+        iconClass = 'bi-check-circle-fill';
+    } else if (status === 'PAID') {
+        bgColor = '#d1ecf1';
+        iconColor = '#17a2b8';
+        iconClass = 'bi-check2-circle';
+    } else if (status === 'FAILED') {
+        bgColor = '#f8d7da';
+        iconColor = '#dc3545';
+        iconClass = 'bi-x-circle-fill';
+    } else if (status === 'REVIEW') {
+        bgColor = '#fff3cd';
+        iconColor = '#ffc107';
+        iconClass = 'bi-exclamation-triangle-fill';
+    } else if (status === 'PROCESSING') {
+        bgColor = '#cce5ff';
+        iconColor = '#007bff';
+        iconClass = 'bi-arrow-repeat';
+    }
+    
+    iconContainer.style.background = bgColor;
+    const icon = iconContainer.querySelector('i');
+    if (icon) {
+        icon.className = `bi ${iconClass}`;
+        icon.style.fontSize = '42px';
+        icon.style.color = iconColor;
+    }
+}
+</script>
+
 <!-- Auto Refresh Script -->
 <script>
-setInterval(function () {
-    fetch(window.location.href, {
-        headers: { "X-Requested-With": "XMLHttpRequest" }
-    })
-    .then(res => res.text())
-    .then(html => {
-        let parser = new DOMParser();
-        let doc = parser.parseFromString(html, "text/html");
-        let newStatus = doc.querySelector("#statusBox").innerHTML;
-        document.querySelector("#statusBox").innerHTML = newStatus;
-    });
-}, 5000);
+let refreshInterval = null;
+
+function startAutoRefresh() {
+    // Don't refresh if already final
+    const statusText = document.querySelector('#statusBox h5')?.textContent || '';
+    if (statusText.includes('Activated') || 
+        statusText.includes('Payment Received') || 
+        statusText.includes('Payment Failed') ||
+        statusText.includes('Requires Review')) {
+        return;
+    }
+    
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    
+    refreshInterval = setInterval(function () {
+        fetch(window.location.href + '?refresh=true', {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Network error');
+            return res.json();
+        })
+        .then(data => {
+            if (data.status) {
+                // Check if status changed
+                const currentStatusText = document.querySelector('#statusBox h5')?.textContent || '';
+                const newStatusText = data.status_display || data.status;
+                
+                if (!currentStatusText.includes(newStatusText) && 
+                    !currentStatusText.includes('Activated') &&
+                    !currentStatusText.includes('Payment Received')) {
+                    // Refresh the whole page if status changed significantly
+                    location.reload();
+                }
+            }
+        })
+        .catch(error => {
+            // Silent fail - don't spam errors
+        });
+    }, 5000);
+}
+
+// Start auto-refresh when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    startAutoRefresh();
+});
 </script>
 
 {% endblock %}

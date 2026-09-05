@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/payments/', admin_dashboard, name='admin_dashboard'),
     path('admin/process/<int:payment_id>/', start_processing, name='start_processing'),
     path('admin/complete/<int:payment_id>/', mark_completed, name='mark_completed'),
+    path('retry/<int:payment_id>/', views.retry_payment, name='retry_payment'),
 ]
