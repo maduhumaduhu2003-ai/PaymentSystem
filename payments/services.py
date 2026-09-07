@@ -8,7 +8,7 @@ from django.core.cache import cache
 logger = logging.getLogger("payments")
 
 # ClickPesa configuration
-CLICKPESA_BASE_URL = getattr(settings, "CLICKPESA_BASE_URL", "https://api.clickpesa.com/third-parties")
+CLICKPESA_BASE_URL = getattr(settings, "CLICKPESA_BASE_URL", "https://api.clickpesa.com")
 TOKEN_CACHE_KEY = "clickpesa_token"
 TOKEN_CACHE_TIMEOUT = getattr(settings, "CLICKPESA_TOKEN_CACHE_TIMEOUT", 600)
 
@@ -123,7 +123,7 @@ def initiate_clickpesa_ussd_push(token, amount, order_reference, phone_number):
 
     try:
         response = requests.post(
-            f"{CLICKPESA_BASE_URL}/payments/initiate-ussd-push-request",
+            f"{CLICKPESA_BASE_URL}/third-parties/payments/initiate-ussd-push-request",
             headers=_headers(token),
             json=payload,
             timeout=(5, 30),
@@ -180,7 +180,7 @@ def query_clickpesa_payment(token, order_reference):
 
     try:
         response = requests.get(
-            f"{CLICKPESA_BASE_URL}/payments/{order_reference}",
+            f"{CLICKPESA_BASE_URL}/third-parties/payments/{order_reference}",
             headers=_headers(token),
             timeout=(5, 30),
         )

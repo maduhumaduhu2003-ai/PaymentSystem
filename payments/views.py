@@ -36,7 +36,7 @@ logger = logging.getLogger("payments")
 # ============================================================================
 
 def generate_order_reference():
-    return f"PAY-{uuid.uuid4().hex[:20].upper()}"
+    return f"PAY{uuid.uuid4().hex[:12].upper()}"
 
 
 def sync_payment_from_gateway_data(payment, gateway_data):
