@@ -517,6 +517,11 @@ def subscriptions(request):
 # ============================================================================
 # BUSINESS REPORTS
 # ============================================================================
+# business/views.py - Badilisha reports function
+
+# ============================================================================
+# BUSINESS REPORTS
+# ============================================================================
 
 @login_required
 def reports(request):
@@ -553,8 +558,10 @@ def reports(request):
         'total_revenue': Payment.objects.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
         'today_revenue': today_payments.filter(status='PAID').aggregate(total=Sum('amount'))['total'] or 0,
         'today_payments_count': today_payments.count(),
-        'top_customers': User.objects.filter(role='customer').annotate(  # ← Sasa inafanya kazi
-            total_spent=Sum('payment__amount', filter=Q(payment__status='PAID'))
+        
+
+        'top_customers': User.objects.filter(role='customer').annotate(
+            total_spent=Sum('payments__amount', filter=Q(payments__status='PAID'))
         ).order_by('-total_spent')[:10],
     }
     

@@ -79,7 +79,7 @@ class Payment(models.Model):
             models.Index(fields=["requires_review", "status"], name="pay_review_status_idx"),
         ]
         constraints = [
-            # ✅ FIXED: Use strings directly instead of Payment.PENDING
+            # Use strings directly instead of Payment.PENDING
             models.UniqueConstraint(
                 fields=["user", "package"],
                 condition=Q(status__in=["PENDING", "PROCESSING"]),
