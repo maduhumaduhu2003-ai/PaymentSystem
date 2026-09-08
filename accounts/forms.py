@@ -11,7 +11,7 @@ class RegisterForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
             'id': 'passwordInput',
-            'placeholder': 'Enter password',
+            'placeholder': 'Enter password (min 8 characters)',
         })
     )
     confirm_password = forms.CharField(
@@ -41,16 +41,13 @@ class RegisterForm(forms.ModelForm):
         """Validate phone number is unique and valid"""
         phone = self.cleaned_data.get('phone_number')
         
-        # Validate Tanzania phone format
         if not validate_tanzania_phone(phone):
             raise forms.ValidationError("Invalid Tanzania phone number. Use 07XXXXXXXX or 2557XXXXXXXX")
         
-        # Normalize phone
         normalized = normalize_phone(phone)
         if not normalized:
             raise forms.ValidationError("Invalid phone number format")
         
-        # Check if already registered
         if User.objects.filter(phone_number=normalized).exists():
             raise forms.ValidationError("Phone number already registered")
         
@@ -64,6 +61,9 @@ class RegisterForm(forms.ModelForm):
 
         if password and confirm and password != confirm:
             self.add_error('confirm_password', "Passwords do not match")
+        
+        if password and len(password) < 8:
+            self.add_error('password', "Password must be at least 8 characters")
 
         return cleaned_data
 
@@ -71,8 +71,6 @@ class RegisterForm(forms.ModelForm):
         """Save user with default role as Customer"""
         user = super().save(commit=False)
         user.set_password(self.cleaned_data["password"])
-        
-        # Default role is Customer
         user.role = 'customer'
         
         if commit:
@@ -81,47 +79,90 @@ class RegisterForm(forms.ModelForm):
 
 
 class ProfileForm(forms.ModelForm):
-    """Profile update form with phone validation"""
+    """Profile update form for customers"""
     
     class Meta:
         model = User
-        fields = ["username", "phone_number"]
+        fields = ['full_name', 'username', 'phone_number', 'email', 'address', 'city']
         
         widgets = {
-            "username": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Enter username",
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter full name',
             }),
-            "phone_number": forms.TextInput(attrs={
-                "class": "form-control",
-                "placeholder": "Enter phone number (07XXXXXXXX)",
-                # "readonly": True,  # Umeondoa readonly ili kuruhusu kubadilika
+            'username': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter username',
+            }),
+            'phone_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter phone number',
+                'readonly': True,  # Phone number cannot be changed
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter email address',
+            }),
+            'address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter address',
+                'rows': 2,
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter city',
             }),
         }
 
     def clean_phone_number(self):
-        """Validate and normalize phone number"""
+        """Phone number should not be changed"""
         phone = self.cleaned_data.get('phone_number')
+        if phone != self.instance.phone_number:
+            raise forms.ValidationError("Phone number cannot be changed. Contact support.")
+        return phone
+
+
+class BusinessProfileForm(forms.ModelForm):
+    """Profile update form for business owners"""
+    
+    class Meta:
+        model = User
+        fields = [
+            'business_name', 'business_address', 'business_phone',
+            'business_email', 'tax_id', 'full_name', 'email'
+        ]
         
-        if not phone:
-            raise forms.ValidationError("Phone number is required")
-        
-        # Validate Tanzania phone format
-        if not validate_tanzania_phone(phone):
-            raise forms.ValidationError(
-                "Invalid Tanzania phone number. Use format: 07XXXXXXXX or 2557XXXXXXXX"
-            )
-        
-        # Normalize phone number
-        normalized = normalize_phone(phone)
-        if not normalized:
-            raise forms.ValidationError("Invalid phone number format")
-        
-        # Check if phone number is already used by another user
-        if User.objects.exclude(pk=self.instance.pk).filter(phone_number=normalized).exists():
-            raise forms.ValidationError("Phone number already registered to another user")
-        
-        return normalized
+        widgets = {
+            'business_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter business name',
+            }),
+            'business_address': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter business address',
+                'rows': 3,
+            }),
+            'business_phone': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter business phone',
+            }),
+            'business_email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter business email',
+            }),
+            'tax_id': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter TIN number',
+            }),
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter contact person name',
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter contact email',
+            }),
+        }
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):

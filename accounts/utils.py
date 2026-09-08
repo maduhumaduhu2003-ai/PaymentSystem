@@ -38,6 +38,9 @@ def normalize_phone(phone):
     # Remove spaces, dashes, parentheses
     phone = re.sub(r"[\s\-\(\)]", "", phone)
     
+    if not validate_tanzania_phone(phone):
+        return None
+    
     if phone.startswith('0'):
         return "255" + phone[-9:]
     
