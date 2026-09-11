@@ -472,6 +472,13 @@
                         <span>Packages</span>
                     </a>
 
+                                        <!-- base.html - Ongeza kwenye Business Owner nav links -->
+
+<a href="{% url 'business_decoder_types' %}" class="{% if request.resolver_match.url_name == 'business_decoder_types' %}active{% endif %}">
+    <i class="bi bi-tv"></i>
+    <span>Decoder Types</span>
+</a>
+
                     <a href="{% url 'business_subscriptions' %}" class="{% if request.resolver_match.url_name == 'business_subscriptions' %}active{% endif %}">
                         <i class="bi bi-calendar-check"></i>
                         <span>Subscriptions</span>
@@ -497,10 +504,12 @@
                         <span>Dashboard</span>
                     </a>
 
+
                     <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'packages' %}active{% endif %}">
                         <i class="bi bi-box"></i>
                         <span>Packages</span>
                     </a>
+
 
                     <a href="{% url 'payments_list' %}" class="{% if request.resolver_match.url_name == 'payments_list' %}active{% endif %}">
                         <i class="bi bi-credit-card"></i>

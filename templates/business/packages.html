@@ -13,7 +13,7 @@
                     Packages
                 </h4>
                 <p class="text-muted small mt-1">
-                    Manage your packages - Add, Edit, or Delete
+                    Manage packages for each decoder type
                 </p>
             </div>
             <div>
@@ -52,12 +52,48 @@
             </div>
         </div>
 
+        <!-- Decoder Type Filter Tabs -->
+        <div class="card mb-4" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+            <div class="card-body" style="padding: 15px 20px;">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="text-muted small me-2">
+                        <i class="bi bi-funnel me-1"></i> Filter by Decoder:
+                    </span>
+                    <a href="{% url 'business_packages' %}" 
+                       class="btn btn-sm {% if not decoder_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if not decoder_filter %}background: #f28c18; border-color: #f28c18;{% else %}border-color: #e5e5e5; color: #555;{% endif %}">
+                        <i class="bi bi-grid me-1"></i> All
+                    </a>
+                    {% for decoder in decoder_types %}
+                    <a href="?decoder={{ decoder.id }}" 
+                       class="btn btn-sm {% if decoder_filter == decoder.id|stringformat:'s' %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                       style="{% if decoder_filter == decoder.id|stringformat:'s' %}background: #f28c18; border-color: #f28c18;{% else %}border-color: #e5e5e5; color: #555;{% endif %}">
+                        <i class="bi {{ decoder.icon|default:'bi-tv' }} me-1"></i> {{ decoder.name }}
+                        <span class="badge ms-1" style="background: rgba(0,0,0,0.1); color: inherit;">
+                            {{ decoder.packages.count }}
+                        </span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <!-- Packages Grid -->
         <div class="row g-4">
             {% for package in packages %}
             <div class="col-md-4">
-                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
-                    <div class="card-body">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px; position: relative;">
+                    <!-- Decoder Type Badge -->
+                    {% if package.decoder_type %}
+                    <div style="position: absolute; top: 12px; left: 12px;">
+                        <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 4px 10px; font-size: 11px;">
+                            <i class="bi {{ package.decoder_type.icon|default:'bi-tv' }} me-1"></i>
+                            {{ package.decoder_type.name }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="card-body" style="padding-top: 45px;">
                         <div class="d-flex justify-content-between align-items-start">
                             <h5 class="fw-bold">{{ package.name }}</h5>
                             <div class="dropdown">
@@ -110,7 +146,7 @@
 </div>
 
 <!-- =========================================================
-     ADD PACKAGE MODAL - FIXED
+     ADD PACKAGE MODAL
 ========================================================= -->
 <div class="modal fade" id="addPackageModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -126,9 +162,24 @@
                 <form id="addPackageForm">
                     {% csrf_token %}
                     
+                    <!-- ✅ Decoder Type Field -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Decoder Type <span class="text-danger">*</span></label>
+                        <select name="decoder_type" class="form-select" required>
+                            <option value="">-- Select Decoder Type --</option>
+                            {% for decoder in decoder_types %}
+                            <option value="{{ decoder.id }}">{{ decoder.name }} ({{ decoder.code }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Package itaonekana kwa decoder type hii tu
+                        </small>
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Package Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="Enter package name" required>
+                        <input type="text" name="name" class="form-control" placeholder="e.g., Premium, Basic, Family" required>
                     </div>
                     
                     <div class="mb-3">
@@ -139,11 +190,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Price (TZS) <span class="text-danger">*</span></label>
-                            <input type="number" name="price" class="form-control" placeholder="10000" required min="1">
+                            <input type="number" name="price" class="form-control" placeholder="10000" required min="1" step="0.01">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Duration (Months) <span class="text-danger">*</span></label>
-                            <input type="number" name="duration_months" class="form-control" placeholder="1" required min="1">
+                            <input type="number" name="duration_months" class="form-control" placeholder="1" required min="1" max="12">
                         </div>
                     </div>
                     
@@ -168,7 +219,7 @@
 </div>
 
 <!-- =========================================================
-     EDIT PACKAGE MODAL - FIXED
+     EDIT PACKAGE MODAL
 ========================================================= -->
 <div class="modal fade" id="editPackageModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -185,6 +236,17 @@
                     {% csrf_token %}
                     <input type="hidden" name="package_id" id="editPackageId">
                     
+                    <!-- ✅ Decoder Type Field -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Decoder Type <span class="text-danger">*</span></label>
+                        <select name="decoder_type" id="editDecoderType" class="form-select" required>
+                            <option value="">-- Select Decoder Type --</option>
+                            {% for decoder in decoder_types %}
+                            <option value="{{ decoder.id }}">{{ decoder.name }} ({{ decoder.code }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Package Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" id="editName" class="form-control" required>
@@ -198,11 +260,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Price (TZS) <span class="text-danger">*</span></label>
-                            <input type="number" name="price" id="editPrice" class="form-control" required min="1">
+                            <input type="number" name="price" id="editPrice" class="form-control" required min="1" step="0.01">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Duration (Months) <span class="text-danger">*</span></label>
-                            <input type="number" name="duration_months" id="editDuration" class="form-control" required min="1">
+                            <input type="number" name="duration_months" id="editDuration" class="form-control" required min="1" max="12">
                         </div>
                     </div>
                     
@@ -227,7 +289,7 @@
 </div>
 
 <!-- =========================================================
-     DELETE PACKAGE MODAL - FIXED
+     DELETE PACKAGE MODAL
 ========================================================= -->
 <div class="modal fade" id="deletePackageModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -285,9 +347,7 @@ function submitAddPackage() {
     fetch("{% url 'business_add_package' %}", {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
@@ -295,10 +355,7 @@ function submitAddPackage() {
             messageDiv.className = 'alert alert-success mt-3';
             messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
             messageDiv.style.display = 'block';
-            
-            setTimeout(function() {
-                location.reload();
-            }, 1500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             messageDiv.className = 'alert alert-danger mt-3';
             messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
@@ -320,15 +377,13 @@ function openEditModal(packageId) {
     messageDiv.style.display = 'none';
     messageDiv.className = '';
     
-    // Fetch package data
     fetch("{% url 'business_edit_package' 0 %}".replace('0', packageId), {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
         document.getElementById('editPackageId').value = data.id;
+        document.getElementById('editDecoderType').value = data.decoder_type || '';
         document.getElementById('editName').value = data.name;
         document.getElementById('editDescription').value = data.description || '';
         document.getElementById('editPrice').value = data.price;
@@ -354,9 +409,7 @@ function submitEditPackage() {
     fetch("{% url 'business_edit_package' 0 %}".replace('0', packageId), {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
@@ -364,10 +417,7 @@ function submitEditPackage() {
             messageDiv.className = 'alert alert-success mt-3';
             messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
             messageDiv.style.display = 'block';
-            
-            setTimeout(function() {
-                location.reload();
-            }, 1500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             messageDiv.className = 'alert alert-danger mt-3';
             messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;
@@ -389,7 +439,6 @@ function openDeleteModal(packageId, packageName) {
     document.getElementById('deletePackageName').textContent = packageName;
     document.getElementById('deletePackageMessage').style.display = 'none';
     document.getElementById('deletePackageMessage').className = '';
-    
     var modal = new bootstrap.Modal(document.getElementById('deletePackageModal'));
     modal.show();
 }
@@ -403,9 +452,7 @@ function submitDeletePackage() {
     fetch("{% url 'business_delete_package' 0 %}".replace('0', packageId), {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
@@ -413,10 +460,7 @@ function submitDeletePackage() {
             messageDiv.className = 'alert alert-success mt-3';
             messageDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i>' + data.message;
             messageDiv.style.display = 'block';
-            
-            setTimeout(function() {
-                location.reload();
-            }, 1500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             messageDiv.className = 'alert alert-danger mt-3';
             messageDiv.innerHTML = '<i class="bi bi-exclamation-circle me-2"></i>' + data.error;

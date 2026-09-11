@@ -23,6 +23,12 @@ urlpatterns = [
     path('packages/edit/<int:package_id>/', views.edit_package, name='business_edit_package'),
     path('packages/delete/<int:package_id>/', views.delete_package, name='business_delete_package'),
     
+        # Decoder Types
+    path('decoder-types/', views.decoder_types, name='business_decoder_types'),
+    path('decoder-types/add/', views.add_decoder_type, name='business_add_decoder_type'),
+    path('decoder-types/edit/<int:decoder_type_id>/', views.edit_decoder_type, name='business_edit_decoder_type'),
+    path('decoder-types/delete/<int:decoder_type_id>/', views.delete_decoder_type, name='business_delete_decoder_type'),
+    
     # Subscriptions
     path('subscriptions/', views.subscriptions, name='business_subscriptions'),
     

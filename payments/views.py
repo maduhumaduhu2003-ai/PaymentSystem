@@ -12,8 +12,8 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from packages.models import Package
-from .models import Payment
+from packages.models import Package, DecoderType
+from .models import Payment, PaymentItem
 from .services import (
     validate_tanzania_phone,
     normalize_tanzania_phone,
@@ -152,6 +152,8 @@ def is_staff(user):
 # CUSTOMER: MAKE PAYMENT
 # ============================================================================
 
+# payments/views.py - Badilisha make_payment
+
 @login_required
 def make_payment(request, package_id):
     package = get_object_or_404(Package, id=package_id, is_active=True)
@@ -159,15 +161,38 @@ def make_payment(request, package_id):
     if request.method != "POST":
         return render(request, "payments/pay.html", {"package": package})
 
-    decoder = request.POST.get("decoder_number", "").strip()
+    # Get decoders and months from form
+    decoder_numbers = request.POST.getlist("decoder_number[]")
+    months_list = request.POST.getlist("months[]")
     phone = request.POST.get("payment_phone", "").strip()
 
-    if not decoder or len(decoder) > 100:
-        messages.error(request, "Valid decoder number required.")
+    # Validate decoders
+    if not decoder_numbers or not any(d.strip() for d in decoder_numbers):
+        messages.error(request, "At least one decoder number is required.")
         return redirect("make_payment", package.id)
 
+    # Filter valid decoders
+    valid_decoders = []
+    for i, decoder in enumerate(decoder_numbers):
+        decoder = decoder.strip()
+        if decoder:
+            try:
+                months = int(months_list[i]) if i < len(months_list) else 1
+            except (ValueError, IndexError):
+                months = 1
+            months = max(1, min(months, 12))  # Between 1 and 12
+            valid_decoders.append({
+                'decoder': decoder,
+                'months': months,
+            })
+
+    if not valid_decoders:
+        messages.error(request, "At least one valid decoder number is required.")
+        return redirect("make_payment", package.id)
+
+    # Validate phone
     if not validate_tanzania_phone(phone):
-        messages.error(request, "Invalid phone number. Use 07XXXXXXXX or 2557XXXXXXXX.")
+        messages.error(request, "Invalid phone number.")
         return redirect("make_payment", package.id)
 
     normalized_phone = normalize_tanzania_phone(phone)
@@ -175,22 +200,17 @@ def make_payment(request, package_id):
         messages.error(request, "Invalid phone number.")
         return redirect("make_payment", package.id)
 
-    # Amount from database - NEVER from frontend
-    try:
-        amount = Decimal(str(package.price))
-        if amount <= 0:
-            raise ValueError
-    except (ValueError, TypeError):
-        logger.error(f"Invalid package price for package {package.id}")
-        messages.error(request, "This package cannot be purchased.")
-        return redirect("make_payment", package.id)
+    # Calculate total
+    unit_price = Decimal(str(package.price))
+    total_amount = sum(unit_price * d['months'] for d in valid_decoders)
+    total_months = sum(d['months'] for d in valid_decoders)
 
     token = get_clickpesa_token()
     if not token:
         messages.error(request, "Payment system temporarily unavailable.")
         return redirect("make_payment", package.id)
 
-    # Create payment - with database-level protection
+    # Create payment with items
     try:
         with transaction.atomic():
             existing = Payment.objects.select_for_update().filter(
@@ -205,13 +225,27 @@ def make_payment(request, package_id):
             payment = Payment.objects.create(
                 user=request.user,
                 package=package,
-                decoder_number=decoder,
+                decoder_type=package.decoder_type,
+                decoder_number=valid_decoders[0]['decoder'],
                 payment_phone=normalized_phone,
-                amount=amount,
+                amount=total_amount,
                 currency="TZS",
                 status=Payment.PENDING,
                 order_reference=generate_order_reference(),
+                total_decoders=len(valid_decoders),
+                total_months=total_months,
             )
+
+            # Create payment items
+            for d in valid_decoders:
+                PaymentItem.objects.create(
+                    payment=payment,
+                    decoder_number=d['decoder'],
+                    months=d['months'],
+                    package=package,
+                    unit_price=unit_price,
+                    subtotal=unit_price * d['months'],
+                )
     except IntegrityError:
         existing = Payment.objects.filter(
             user=request.user,
@@ -225,7 +259,7 @@ def make_payment(request, package_id):
         messages.error(request, "Unable to create payment. Please try again.")
         return redirect("make_payment", package.id)
 
-    # Call ClickPesa outside transaction
+    # Send USSD Push for total amount
     result = initiate_clickpesa_ussd_push(
         token=token,
         amount=payment.amount,

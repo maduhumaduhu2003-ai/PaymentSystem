@@ -1,29 +1,18 @@
+# packages/admin.py
+
 from django.contrib import admin
-from .models import Package
+from .models import DecoderType, Package
+
+
+@admin.register(DecoderType)
+class DecoderTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'code')
 
 
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
-
-    list_display = (
-        'name',
-        'duration_months',
-        'price',
-        'is_active',
-        'created_at'
-    )
-
-    list_filter = (
-        'is_active',
-        'duration_months'
-    )
-
-    search_fields = (
-        'name',
-    )
-
-    ordering = ('price',)
-
-    list_editable = ('price', 'is_active')
-
-    readonly_fields = ('created_at',)
+    list_display = ('name', 'decoder_type', 'price', 'duration_months', 'is_active')
+    list_filter = ('decoder_type', 'is_active')
+    search_fields = ('name',)

@@ -4,11 +4,14 @@ from django.db.models import Q
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from accounts.models import User
-from packages.models import Package
+from packages.models import Package, DecoderType
 
 
 class Payment(models.Model):
-    # Status constants
+    # =========================================================================
+    # STATUS CONSTANTS
+    # =========================================================================
+    
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
     PAID = "PAID"
@@ -34,16 +37,64 @@ class Payment(models.Model):
         REVIEW: [PAID, FAILED],
     }
 
-    # Fields
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments", db_index=True)
-    package = models.ForeignKey(Package, on_delete=models.PROTECT, related_name="payments", db_index=True)
+    # =========================================================================
+    # CORE RELATIONSHIPS
+    # =========================================================================
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        db_index=True
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.PROTECT,
+        related_name="payments",
+        db_index=True
+    )
+    decoder_type = models.ForeignKey(
+        DecoderType,
+        on_delete=models.PROTECT,
+        related_name="payments",
+        null=True,
+        blank=True,
+        db_index=True
+    )
 
+    # =========================================================================
+    # PAYMENT DETAILS
+    # =========================================================================
+    
+    # Primary decoder (first decoder)
     decoder_number = models.CharField(max_length=100)
+    
+    # Legacy support - kept for compatibility
     payment_phone = models.CharField(max_length=15, db_index=True)
+    
+    # Multi-decoder support
+    total_decoders = models.IntegerField(default=1)
+    total_months = models.IntegerField(default=1)
 
-    transaction_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
-    order_reference = models.CharField(max_length=100, unique=True)
+    # =========================================================================
+    # GATEWAY REFERENCES
+    # =========================================================================
+    
+    transaction_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True
+    )
+    order_reference = models.CharField(
+        max_length=100,
+        unique=True
+    )
 
+    # =========================================================================
+    # MONEY
+    # =========================================================================
+    
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -51,35 +102,57 @@ class Payment(models.Model):
     )
     currency = models.CharField(max_length=3, default="TZS")
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=PENDING, db_index=True)
+    # =========================================================================
+    # STATUS
+    # =========================================================================
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=PENDING,
+        db_index=True
+    )
 
-    # Timestamps
+    # =========================================================================
+    # TIMESTAMPS
+    # =========================================================================
+    
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     processed_at = models.DateTimeField(null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    # Webhook tracking
+    # =========================================================================
+    # WEBHOOK TRACKING
+    # =========================================================================
+    
     webhook_received_at = models.DateTimeField(null=True, blank=True)
     webhook_processed = models.BooleanField(default=False)
 
-    # Review/Reconciliation
+    # =========================================================================
+    # REVIEW / RECONCILIATION
+    # =========================================================================
+    
     requires_review = models.BooleanField(default=False, db_index=True)
     review_reason = models.CharField(max_length=255, blank=True, default="")
     gateway_status = models.CharField(max_length=50, blank=True, default="")
     gateway_message = models.CharField(max_length=500, blank=True, default="")
     last_checked_at = models.DateTimeField(null=True, blank=True)
 
+    # =========================================================================
+    # META
+    # =========================================================================
+    
     class Meta:
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["user", "status"], name="pay_user_status_idx"),
             models.Index(fields=["package", "status"], name="pay_package_status_idx"),
+            models.Index(fields=["decoder_type", "status"], name="pay_dtype_status_idx"),
             models.Index(fields=["created_at", "status"], name="pay_created_status_idx"),
             models.Index(fields=["requires_review", "status"], name="pay_review_status_idx"),
         ]
         constraints = [
-            # Use strings directly instead of Payment.PENDING
             models.UniqueConstraint(
                 fields=["user", "package"],
                 condition=Q(status__in=["PENDING", "PROCESSING"]),
@@ -87,9 +160,17 @@ class Payment(models.Model):
             ),
         ]
 
+    # =========================================================================
+    # STRING
+    # =========================================================================
+    
     def __str__(self):
         return f"{self.order_reference} - {self.status}"
 
+    # =========================================================================
+    # STATUS HELPERS
+    # =========================================================================
+    
     def can_transition_to(self, new_status):
         return new_status in self.VALID_TRANSITIONS.get(self.status, [])
 
@@ -99,6 +180,10 @@ class Payment(models.Model):
         self.status = new_status
         return True
 
+    # =========================================================================
+    # STATUS METHODS
+    # =========================================================================
+    
     def mark_processing(self):
         if self.transition_to(self.PROCESSING):
             self.processed_at = self.processed_at or timezone.now()
@@ -130,6 +215,10 @@ class Payment(models.Model):
             return True
         return False
 
+    # =========================================================================
+    # PROPERTIES
+    # =========================================================================
+    
     @property
     def is_final(self):
         return self.status in (self.COMPLETED, self.FAILED)
@@ -137,3 +226,70 @@ class Payment(models.Model):
     @property
     def is_active(self):
         return self.status in (self.PENDING, self.PROCESSING)
+
+    @property
+    def has_multiple_decoders(self):
+        return self.total_decoders > 1
+
+    @property
+    def items_count(self):
+        return self.items.count()
+
+
+class PaymentItem(models.Model):
+    """
+    Individual decoder item within a payment.
+    
+    Supports multiple decoders in a single payment transaction.
+    Each item has its own decoder number, months, and subtotal.
+    """
+    
+    payment = models.ForeignKey(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name="items"
+    )
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.PROTECT,
+        related_name="payment_items"
+    )
+    decoder_number = models.CharField(max_length=100, db_index=True)
+    months = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(1)]
+    )
+    unit_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    subtotal = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.01"))]
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [
+            models.Index(fields=["decoder_number"], name="payitem_decoder_idx"),
+            models.Index(fields=["payment"], name="payitem_payment_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.decoder_number} - {self.months}mo - TZS {self.subtotal}"
+
+    def save(self, *args, **kwargs):
+        """Auto-calculate subtotal before saving"""
+        if self.unit_price and self.months:
+            self.subtotal = self.unit_price * self.months
+        super().save(*args, **kwargs)
+
+    @property
+    def duration_display(self):
+        """Human-readable duration"""
+        if self.months == 1:
+            return "1 Month"
+        return f"{self.months} Months"

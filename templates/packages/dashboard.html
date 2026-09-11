@@ -3,102 +3,64 @@
 {% block content %}
 
 <div class="main-content">
-
     <div class="container-fluid px-4">
 
-        <!-- Page Header -->
+        <!-- Header -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold mb-0" style="color: #333333;">
                     <i class="bi bi-box-seam me-2" style="color: #f28c18;"></i>
-                    Available Decoder Packages
+                    {% if decoder_type %}{{ decoder_type.name }}{% else %}Available{% endif %} Packages
                 </h4>
                 <p class="text-muted small mt-1">
                     Select a package that suits your needs
                 </p>
             </div>
-            <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 8px 16px; border-radius: 20px;">
-                <i class="bi bi-grid-3x3-gap-fill me-1"></i>
-                {{ packages|length }} Packages
-            </span>
+            <div>
+                <a href="{% url 'decoder_selection' %}" class="btn btn-sm" style="background: #f5f5f5; color: #555;">
+                    <i class="bi bi-arrow-left me-1"></i> Change Decoder
+                </a>
+            </div>
         </div>
 
         <!-- Packages Grid -->
         <div class="row g-4">
-
             {% for package in packages %}
-
             <div class="col-md-6 col-lg-4">
-
-                <div class="card h-100" style="border: 1px solid #e5e5e5 !important; border-radius: 6px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035) !important; transition: all 0.3s ease;">
-
-                    <!-- Package Icon -->
+                <div class="card h-100" style="border: 1px solid #e5e5e5 !important; border-radius: 6px !important;">
                     <div class="text-center pt-4">
                         <div style="width: 64px; height: 64px; background: #fff5e9; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
                             <i class="bi bi-tv" style="font-size: 28px; color: #f28c18;"></i>
                         </div>
                     </div>
-
-                    <!-- Card Body -->
                     <div class="card-body text-center" style="padding: 20px 25px 25px 25px;">
-
-                        <h5 class="fw-bold mb-1" style="color: #333333;">
-                            {{ package.name }}
-                        </h5>
-
+                        <h5 class="fw-bold mb-1" style="color: #333333;">{{ package.name }}</h5>
                         {% if package.description %}
-                        <p class="text-muted small mb-3" style="font-size: 13px;">
-                            {{ package.description }}
-                        </p>
-                        {% else %}
-                        <p class="text-muted small mb-3" style="font-size: 13px;">
-                            <span class="text-muted">No description</span>
-                        </p>
+                        <p class="text-muted small mb-3" style="font-size: 13px;">{{ package.description }}</p>
                         {% endif %}
-
-                        <!-- Duration -->
                         <div class="mb-3">
-                            <span class="badge" style="background: #f0f0f0; color: #555555; padding: 6px 14px; border-radius: 20px; font-weight: 500;">
-                                <i class="bi bi-clock me-1"></i>
-                                {{ package.duration_months }} Month(s)
+                            <span class="badge" style="background: #f0f0f0; color: #555; padding: 6px 14px; border-radius: 20px;">
+                                <i class="bi bi-clock me-1"></i> {{ package.duration_months }} Month(s)
                             </span>
                         </div>
-
-                        <!-- Price -->
-                        <h4 class="fw-bold mb-3" style="color: #f28c18;">
-                            TZS {{ package.price }}
-                        </h4>
-
-                        <!-- Button -->
-                        <a href="{% url 'make_payment' package.id %}" class="btn w-100" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 10px; border-radius: 4px; font-weight: 500; transition: all 0.2s ease;">
-                            <i class="bi bi-arrow-right-circle me-1"></i>
-                            Select Package
+                        <h4 class="fw-bold mb-3" style="color: #f28c18;">TZS {{ package.price }}</h4>
+                        <a href="{% url 'make_payment' package.id %}" class="btn w-100" style="background: #f28c18; color: white; padding: 10px; border-radius: 4px;">
+                            <i class="bi bi-arrow-right-circle me-1"></i> Select Package
                         </a>
-
                     </div>
-
                 </div>
-
             </div>
-
             {% empty %}
-
             <div class="col-12">
-
-                <div class="text-center py-5" style="background: #fafafa; border-radius: 6px; border: 1px dashed #dcdcdc;">
+                <div class="text-center py-5">
                     <i class="bi bi-box" style="font-size: 48px; color: #cccccc;"></i>
                     <h5 class="mt-3" style="color: #999999;">No Packages Available</h5>
-                    <p class="text-muted small">Check back later for new packages</p>
                 </div>
-
             </div>
-
             {% endfor %}
-
         </div>
 
     </div>
-
 </div>
 
 {% endblock %}
