@@ -60,7 +60,8 @@
 
                         <!-- Buttons -->
                         <div class="d-grid gap-2">
-                            <a href="{% url 'dashboard' %}" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;">
+                            <!-- ✅ FIXED: Use decoder_selection instead of dashboard -->
+                            <a href="{% url 'decoder_selection' %}" class="btn" style="background: #f28c18; border-color: #f28c18; color: #ffffff; padding: 11px; border-radius: 4px; font-weight: 500;">
                                 <i class="bi bi-house-door me-1"></i>
                                 Return to Dashboard
                             </a>

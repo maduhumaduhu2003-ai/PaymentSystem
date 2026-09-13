@@ -19,6 +19,7 @@ from .services import (
     normalize_tanzania_phone,
     get_clickpesa_token,
     initiate_clickpesa_ussd_push,
+    initiate_clickpesa_card_payment,
     query_clickpesa_payment,
     extract_gateway_record,
     get_gateway_status,
@@ -36,6 +37,7 @@ logger = logging.getLogger("payments")
 # ============================================================================
 
 def generate_order_reference():
+    """Generate unique order reference for ClickPesa."""
     return f"PAY{uuid.uuid4().hex[:12].upper()}"
 
 
@@ -105,7 +107,12 @@ def sync_payment_from_gateway_data(payment, gateway_data):
 
 
 def activate_package(payment):
-    """Activate package - idempotent."""
+    """
+    Activate package - idempotent.
+    
+    This should be replaced with your actual business logic.
+    For each decoder, create a subscription or activate the decoder.
+    """
     if payment.status == Payment.COMPLETED:
         logger.info(f"Package already activated for {payment.order_reference}")
         return True
@@ -114,57 +121,61 @@ def activate_package(payment):
         logger.warning(f"Cannot activate package for {payment.order_reference}: status={payment.status}")
         return False
 
-    # =====================================================================
-    # REPLACE WITH YOUR ACTUAL BUSINESS LOGIC
-    # =====================================================================
-    # Example:
-    # from subscriptions.models import Subscription
-    # subscription = Subscription.objects.create(
-    #     user=payment.user,
-    #     package=payment.package,
-    #     decoder_number=payment.decoder_number,
-    #     payment=payment,
-    #     expires_at=timezone.now() + timedelta(days=payment.package.duration_months * 30),
-    # )
-    # send_activation_sms(payment.user.phone_number, subscription)
-    # =====================================================================
-
     logger.info(f"Activating package for {payment.order_reference}: {payment.package.name}")
 
     with transaction.atomic():
         p = Payment.objects.select_for_update().get(id=payment.id)
+        
+        # Activate each decoder separately
+        for item in p.items.all():
+            logger.info(f"  → Activating decoder: {item.decoder_number} for {item.months} months")
+            # TODO: Add actual activation logic here
+            # Example:
+            # from subscriptions.models import Subscription
+            # Subscription.objects.create(
+            #     user=p.user,
+            #     package=item.package,
+            #     decoder_number=item.decoder_number,
+            #     payment=p,
+            #     months=item.months,
+            #     expires_at=timezone.now() + timedelta(days=item.months * 30),
+            # )
+        
         if p.mark_completed():
             p.save()
             logger.info(f"Payment {payment.order_reference} → COMPLETED")
             return True
+    
     return False
 
 
 def get_payment_or_404(payment_id, user):
+    """Get payment or 404, ensuring ownership."""
     return get_object_or_404(Payment, id=payment_id, user=user)
 
 
 def is_staff(user):
+    """Check if user is staff."""
     return user.is_authenticated and user.is_staff
 
 
 # ============================================================================
-# CUSTOMER: MAKE PAYMENT
+# CUSTOMER: MAKE PAYMENT (WITH PAYMENT METHOD)
 # ============================================================================
-
-# payments/views.py - Badilisha make_payment
 
 @login_required
 def make_payment(request, package_id):
+    """Create payment with multiple decoders and payment method."""
     package = get_object_or_404(Package, id=package_id, is_active=True)
 
     if request.method != "POST":
         return render(request, "payments/pay.html", {"package": package})
 
-    # Get decoders and months from form
+    # Get form data
     decoder_numbers = request.POST.getlist("decoder_number[]")
     months_list = request.POST.getlist("months[]")
     phone = request.POST.get("payment_phone", "").strip()
+    payment_method = request.POST.get("payment_method", "USSD").upper()
 
     # Validate decoders
     if not decoder_numbers or not any(d.strip() for d in decoder_numbers):
@@ -180,7 +191,7 @@ def make_payment(request, package_id):
                 months = int(months_list[i]) if i < len(months_list) else 1
             except (ValueError, IndexError):
                 months = 1
-            months = max(1, min(months, 12))  # Between 1 and 12
+            months = max(1, min(months, 12))
             valid_decoders.append({
                 'decoder': decoder,
                 'months': months,
@@ -218,6 +229,7 @@ def make_payment(request, package_id):
                 package=package,
                 status__in=[Payment.PENDING, Payment.PROCESSING],
             ).first()
+            
             if existing:
                 messages.info(request, "You already have a pending payment for this package.")
                 return redirect("payment_status", existing.id)
@@ -234,6 +246,7 @@ def make_payment(request, package_id):
                 order_reference=generate_order_reference(),
                 total_decoders=len(valid_decoders),
                 total_months=total_months,
+                payment_method=payment_method,
             )
 
             # Create payment items
@@ -259,38 +272,79 @@ def make_payment(request, package_id):
         messages.error(request, "Unable to create payment. Please try again.")
         return redirect("make_payment", package.id)
 
-    # Send USSD Push for total amount
-    result = initiate_clickpesa_ussd_push(
-        token=token,
-        amount=payment.amount,
-        order_reference=payment.order_reference,
-        phone_number=payment.payment_phone,
-    )
-
-    if result.get("success"):
-        with transaction.atomic():
-            p = Payment.objects.select_for_update().get(id=payment.id)
-            p.mark_processing()
-            if result.get("transaction_id"):
-                p.transaction_id = str(result.get("transaction_id"))[:100]
-            p.save()
-        messages.success(request, "USSD Push sent. Check your phone and enter your PIN.")
-    elif result.get("ambiguous"):
-        with transaction.atomic():
-            p = Payment.objects.select_for_update().get(id=payment.id)
-            p.mark_processing()
-            p.gateway_message = str(result.get("message", "Processing"))[:500]
-            p.save()
-        messages.info(request, "Payment is being processed. Please wait for confirmation.")
+    # =========================================================================
+    # ROUTE TO PAYMENT METHOD
+    # =========================================================================
+    
+    if payment_method == Payment.METHOD_CARD:
+        # =====================================================================
+        # CARD PAYMENT
+        # =====================================================================
+        result = initiate_clickpesa_card_payment(
+            token=token,
+            amount=payment.amount,
+            order_reference=payment.order_reference,
+            phone_number=payment.payment_phone,
+            customer_email=request.user.email or "",
+            customer_name=request.user.full_name or request.user.username or "",
+        )
+        
+        if result.get("success") and result.get("payment_url"):
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(id=payment.id)
+                p.payment_url = result["payment_url"]
+                p.mark_processing()
+                if result.get("transaction_id"):
+                    p.transaction_id = str(result["transaction_id"])[:100]
+                p.save()
+            
+            messages.info(request, "Redirecting to payment page...")
+            return redirect(result["payment_url"])
+        else:
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(id=payment.id)
+                p.mark_failed()
+                p.gateway_message = str(result.get("message", "Card payment failed"))[:500]
+                p.save()
+            
+            messages.error(request, f"Card payment failed: {result.get('message', 'Unknown error')}")
+            return redirect("payment_status", payment.id)
+    
     else:
-        with transaction.atomic():
-            p = Payment.objects.select_for_update().get(id=payment.id)
-            p.mark_failed()
-            p.gateway_message = str(result.get("message", "Payment failed"))[:500]
-            p.save()
-        messages.error(request, f"Payment failed: {result.get('message', 'Payment failed')}")
+        # =====================================================================
+        # USSD PUSH (DEFAULT)
+        # =====================================================================
+        result = initiate_clickpesa_ussd_push(
+            token=token,
+            amount=payment.amount,
+            order_reference=payment.order_reference,
+            phone_number=payment.payment_phone,
+        )
 
-    return redirect("payment_status", payment.id)
+        if result.get("success"):
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(id=payment.id)
+                p.mark_processing()
+                if result.get("transaction_id"):
+                    p.transaction_id = str(result.get("transaction_id"))[:100]
+                p.save()
+            messages.success(request, "Check your phone and enter your PIN to confirm payment.")
+        elif result.get("ambiguous"):
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(id=payment.id)
+                p.mark_processing()
+                p.gateway_message = str(result.get("message", "Processing"))[:500]
+                p.save()
+            messages.info(request, "Payment is being processed. Please wait for confirmation.")
+        else:
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(id=payment.id)
+                p.mark_failed()
+                p.gateway_message = str(result.get("message", "Payment failed"))[:500]
+                p.save()
+            messages.error(request, f"Payment failed: {result.get('message', 'Payment failed')}")
+
+        return redirect("payment_status", payment.id)
 
 
 # ============================================================================
@@ -299,12 +353,16 @@ def make_payment(request, package_id):
 
 @login_required
 def payment_status(request, payment_id):
+    """View payment status."""
     payment = get_payment_or_404(payment_id, request.user)
 
-    # AJAX refresh - only query if not final
+    # AJAX refresh
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" and request.GET.get("refresh"):
         if payment.is_final:
-            return JsonResponse({"status": payment.status, "status_display": payment.get_status_display()})
+            return JsonResponse({
+                "status": payment.status,
+                "status_display": payment.get_status_display()
+            })
 
         token = get_clickpesa_token()
         if token:
@@ -331,8 +389,12 @@ def payment_status(request, payment_id):
 @require_POST
 @login_required
 def retry_payment(request, payment_id):
+    """Retry failed payment."""
     with transaction.atomic():
-        payment = Payment.objects.select_for_update().filter(id=payment_id, user=request.user).first()
+        payment = Payment.objects.select_for_update().filter(
+            id=payment_id, user=request.user
+        ).first()
+        
         if not payment:
             return JsonResponse({"success": False, "message": "Payment not found"}, status=404)
 
@@ -345,12 +407,12 @@ def retry_payment(request, payment_id):
     if not token:
         return JsonResponse({"success": False, "message": "Payment system unavailable"}, status=503)
 
-    # Check previous reference first
+    # Check previous reference
     query_result = query_clickpesa_payment(token, old_ref)
     if query_result.get("success"):
         with transaction.atomic():
             p = Payment.objects.select_for_update().get(id=payment.id)
-            sync_result = sync_payment_from_gateway_data(p, query_result.get("data"))
+            sync_payment_from_gateway_data(p, query_result.get("data"))
             if p.status in (Payment.PAID, Payment.COMPLETED, Payment.REVIEW):
                 return JsonResponse({
                     "success": True,
@@ -376,7 +438,7 @@ def retry_payment(request, payment_id):
         amount = p.amount
         phone = p.payment_phone
 
-    # Send new USSD
+    # Send USSD
     result = initiate_clickpesa_ussd_push(token, amount, new_ref, phone)
 
     if result.get("success"):
@@ -389,7 +451,7 @@ def retry_payment(request, payment_id):
         return JsonResponse({
             "success": True,
             "status": p.status,
-            "message": "USSD Push sent again. Check your phone.",
+            "message": "Check your phone to confirm payment.",
         })
 
     if result.get("ambiguous"):
@@ -423,7 +485,11 @@ def retry_payment(request, payment_id):
 
 @login_required
 def payments_list(request):
-    payments = Payment.objects.filter(user=request.user).select_related("package").order_by("-created_at")[:100]
+    """List customer payments."""
+    payments = Payment.objects.filter(
+        user=request.user
+    ).select_related("package", "decoder_type").prefetch_related("items").order_by("-created_at")[:100]
+    
     return render(request, "payments/payments.html", {"payments": payments})
 
 
@@ -477,13 +543,16 @@ def clickpesa_callback(request):
         payment.webhook_processed = True
         payment.save()
 
-        # Activate package if PAID - outside transaction if external calls needed
+        # Activate package if PAID
         if payment.status == Payment.PAID:
-            # For now, activate inside transaction
             activate_package(payment)
 
     logger.info(f"Webhook processed: {order_ref} → {payment.status}")
-    return JsonResponse({"success": True, "status": payment.status, "orderReference": payment.order_reference})
+    return JsonResponse({
+        "success": True,
+        "status": payment.status,
+        "orderReference": payment.order_reference
+    })
 
 
 # ============================================================================
@@ -492,18 +561,23 @@ def clickpesa_callback(request):
 
 @login_required
 def transactions(request):
+    """Admin transactions list."""
     if not is_staff(request.user):
         return HttpResponseForbidden("Forbidden")
-    payments = Payment.objects.select_related("user", "package").order_by("-created_at")
+    
+    payments = Payment.objects.select_related("user", "package", "decoder_type").order_by("-created_at")
     paginator = Paginator(payments, 50)
     page_obj = paginator.get_page(request.GET.get("page"))
+    
     return render(request, "payments/transactions.html", {"page_obj": page_obj})
 
 
 @login_required
 def admin_dashboard(request):
+    """Admin payments dashboard."""
     if not is_staff(request.user):
         return redirect("dashboard")
+    
     return render(request, "admin/payments_dashboard.html", {
         "pending_count": Payment.objects.filter(status=Payment.PENDING).count(),
         "processing_count": Payment.objects.filter(status=Payment.PROCESSING).count(),
@@ -518,8 +592,10 @@ def admin_dashboard(request):
 @require_POST
 @login_required
 def start_processing(request, payment_id):
+    """Move payment to processing."""
     if not is_staff(request.user):
         return redirect("dashboard")
+    
     with transaction.atomic():
         payment = Payment.objects.select_for_update().filter(id=payment_id).first()
         if not payment:
@@ -536,8 +612,10 @@ def start_processing(request, payment_id):
 @require_POST
 @login_required
 def mark_completed(request, payment_id):
+    """Mark payment as completed."""
     if not is_staff(request.user):
         return redirect("dashboard")
+    
     with transaction.atomic():
         payment = Payment.objects.select_for_update().filter(id=payment_id).first()
         if not payment:
@@ -557,9 +635,12 @@ def mark_completed(request, payment_id):
 @require_POST
 @login_required
 def resolve_review(request, payment_id):
+    """Resolve payment review."""
     if not is_staff(request.user):
         return redirect("dashboard")
+    
     action = request.POST.get("action", "").lower().strip()
+    
     with transaction.atomic():
         payment = Payment.objects.select_for_update().filter(id=payment_id).first()
         if not payment:
@@ -586,4 +667,5 @@ def resolve_review(request, payment_id):
                 messages.error(request, "Cannot reject")
         else:
             messages.error(request, "Invalid action")
+    
     return redirect("admin_dashboard")

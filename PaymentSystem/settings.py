@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "packages",
     "payments",
     "business",
+    "subscriptions",
 ]
 
 # ============================================================================
@@ -204,6 +205,17 @@ CLICKPESA_MAX_RETRIES = 3
 SELCOM_API_KEY = os.environ.get("SELCOM_API_KEY")
 SELCOM_API_SECRET = os.environ.get("SELCOM_API_SECRET")
 SELCOM_BASE_URL = os.environ.get("SELCOM_BASE_URL", "https://api.selcom.com/v1")
+
+
+
+
+# SMS Configuration (Beem Africa)
+BEEM_API_KEY = os.environ.get('BEEM_API_KEY', '')
+BEEM_SECRET_KEY = os.environ.get('BEEM_SECRET_KEY', '')
+
+# SMS Configuration (NextSMS)
+NEXTSMS_API_KEY = os.environ.get('NEXTSMS_API_KEY', '')
+NEXTSMS_API_SECRET = os.environ.get('NEXTSMS_API_SECRET', '')
 
 # ============================================================================
 # LOGGING

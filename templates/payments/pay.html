@@ -15,7 +15,7 @@
                     {{ package.decoder_type.name }} - {{ package.name }}
                 </p>
             </div>
-            <a href="{% url 'dashboard' package.decoder_type.id %}" class="btn btn-sm" style="background: #f5f5f5; color: #555;">
+            <a href="{% url 'packages_by_decoder' package.decoder_type.id %}" class="btn btn-sm" style="background: #f5f5f5; color: #555;">
                 <i class="bi bi-arrow-left me-1"></i> Back
             </a>
         </div>
@@ -51,7 +51,6 @@
                                     Decoder Numbers
                                 </label>
                                 <div id="decodersContainer">
-                                    <!-- Decoder 1 (default) -->
                                     <div class="decoder-row mb-2" data-index="0">
                                         <div class="row g-2">
                                             <div class="col-md-6">
@@ -86,6 +85,50 @@
                                 <input type="text" name="payment_phone" class="form-control" placeholder="07XXXXXXXX" required>
                             </div>
 
+                            <!-- ============================================== -->
+                            <!-- PAYMENT METHOD SELECTION -->
+                            <!-- ============================================== -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="bi bi-credit-card me-1" style="color: #f28c18;"></i>
+                                    Choose Payment Method
+                                </label>
+                                
+                                <div class="row g-3">
+                                    <!-- USSD Push -->
+                                    <div class="col-md-6">
+                                        <input type="radio" name="payment_method" value="USSD" id="methodUssd" class="d-none" checked>
+                                        <label for="methodUssd" class="payment-method-card active" id="labelUssd">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="method-icon" style="background: #fff5e9;">
+                                                    <i class="bi bi-phone" style="color: #f28c18;"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold mb-0">USSD Push</h6>
+                                                    <small class="text-muted">Pay via mobile money</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Card Payment -->
+                                    <div class="col-md-6">
+                                        <input type="radio" name="payment_method" value="CARD" id="methodCard" class="d-none">
+                                        <label for="methodCard" class="payment-method-card" id="labelCard">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="method-icon" style="background: #e7f3ff;">
+                                                    <i class="bi bi-credit-card-2-front" style="color: #007bff;"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="fw-bold mb-0">Card Payment</h6>
+                                                    <small class="text-muted">Visa, Mastercard</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Total -->
                             <div style="background: #f0f8ff; border-radius: 6px; padding: 20px; border: 1px solid #b8daff; margin-bottom: 20px;">
                                 <div class="d-flex justify-content-between mb-2">
@@ -118,9 +161,58 @@
     </div>
 </div>
 
+<style>
+.payment-method-card {
+    display: block;
+    padding: 15px;
+    border: 2px solid #e5e5e5;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    margin: 0;
+}
+
+.payment-method-card:hover {
+    border-color: #f28c18;
+    background: #fffbf5;
+}
+
+.payment-method-card.active {
+    border-color: #f28c18;
+    background: #fff5e9;
+    box-shadow: 0 0 0 3px rgba(242, 140, 24, 0.1);
+}
+
+.method-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+</style>
+
 <script>
 const packagePrice = parseFloat("{{ package.price }}");
 const maxDecoders = 5;
+
+// Payment method selection
+document.querySelectorAll('input[name="payment_method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.payment-method-card').forEach(label => {
+            label.classList.remove('active');
+        });
+        
+        if (this.value === 'USSD') {
+            document.getElementById('labelUssd').classList.add('active');
+        } else if (this.value === 'CARD') {
+            document.getElementById('labelCard').classList.add('active');
+        }
+    });
+});
 
 function addDecoder() {
     const container = document.getElementById('decodersContainer');
@@ -175,7 +267,7 @@ function removeDecoder(btn) {
 
 function updateRemoveButtons() {
     const rows = document.querySelectorAll('.decoder-row');
-    rows.forEach((row, index) => {
+    rows.forEach((row) => {
         const removeBtn = row.querySelector('.btn-danger');
         if (rows.length > 1) {
             removeBtn.style.display = 'block';
@@ -217,7 +309,6 @@ function updateTotals() {
     document.getElementById('totalAmount').textContent = totalAmount.toLocaleString();
 }
 
-// Listen to changes
 document.addEventListener('input', function(e) {
     if (e.target.name === 'decoder_number[]' || e.target.name === 'months[]') {
         updateTotals();
@@ -230,7 +321,6 @@ document.addEventListener('change', function(e) {
     }
 });
 
-// Initial
 updateTotals();
 updateRemoveButtons();
 </script>

@@ -93,3 +93,64 @@ class User(AbstractUser):
                 self.business_address
             )
         return True
+
+# accounts/models.py - Ongeza hii model
+
+from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+import random
+
+
+class PasswordResetOTP(models.Model):
+    """OTP for password reset via SMS"""
+    
+    user = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='password_reset_otps'
+    )
+    phone_number = models.CharField(max_length=15, db_index=True)
+    otp_code = models.CharField(max_length=6)
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['phone_number', 'otp_code', 'is_used']),
+        ]
+    
+    def __str__(self):
+        return f"{self.phone_number} - {self.otp_code}"
+    
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    @property
+    def is_valid(self):
+        return not self.is_used and not self.is_expired
+    
+    @classmethod
+    def generate_otp(cls, user, phone_number):
+        """Generate new OTP for user"""
+        # Invalidate old OTPs
+        cls.objects.filter(
+            user=user,
+            is_used=False
+        ).update(is_used=True)
+        
+        # Generate 6-digit OTP
+        otp_code = str(random.randint(100000, 999999))
+        
+        # Create OTP (valid for 10 minutes)
+        otp = cls.objects.create(
+            user=user,
+            phone_number=phone_number,
+            otp_code=otp_code,
+            expires_at=timezone.now() + timedelta(minutes=10)
+        )
+        
+        return otp

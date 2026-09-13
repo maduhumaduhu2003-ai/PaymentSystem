@@ -198,3 +198,93 @@ class CustomPasswordChangeForm(PasswordChangeForm):
         if len(password) < 8:
             raise forms.ValidationError("Password must be at least 8 characters")
         return password
+    
+# accounts/forms.py - Ongeza hizi forms
+
+from django import forms
+from .models import User
+from .utils import validate_tanzania_phone, normalize_phone
+
+
+class ForgotPasswordForm(forms.Form):
+    """Form for requesting password reset"""
+    
+    phone_number = forms.CharField(
+        max_length=15,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your phone number',
+            'id': 'phoneInput',
+        })
+    )
+    
+    def clean_phone_number(self):
+        phone = self.cleaned_data.get('phone_number')
+        
+        if not validate_tanzania_phone(phone):
+            raise forms.ValidationError(
+                "Invalid Tanzania phone number. Use 07XXXXXXXX or 2557XXXXXXXX"
+            )
+        
+        normalized = normalize_phone(phone)
+        if not normalized:
+            raise forms.ValidationError("Invalid phone number format")
+        
+        # Check if user exists
+        if not User.objects.filter(phone_number=normalized).exists():
+            raise forms.ValidationError("No account found with this phone number")
+        
+        return normalized
+
+
+class VerifyOTPForm(forms.Form):
+    """Form for verifying OTP"""
+    
+    otp_code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control text-center',
+            'placeholder': '000000',
+            'maxlength': '6',
+            'style': 'font-size: 24px; letter-spacing: 8px; font-weight: 600;',
+        })
+    )
+    
+    def clean_otp_code(self):
+        otp = self.cleaned_data.get('otp_code')
+        
+        if not otp or not otp.isdigit():
+            raise forms.ValidationError("OTP must be 6 digits")
+        
+        return otp
+
+
+class ResetPasswordForm(forms.Form):
+    """Form for setting new password"""
+    
+    new_password = forms.CharField(
+        min_length=8,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter new password (min 8 characters)',
+            'id': 'newPasswordInput',
+        })
+    )
+    confirm_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm new password',
+            'id': 'confirmPasswordInput',
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('new_password')
+        confirm = cleaned_data.get('confirm_password')
+        
+        if password and confirm and password != confirm:
+            self.add_error('confirm_password', "Passwords do not match")
+        
+        return cleaned_data

@@ -26,15 +26,25 @@
         <div class="card mb-4" style="border: 1px solid #e5e5e5; border-radius: 6px;">
             <div class="card-body">
                 <form method="GET" class="row g-3">
-                    <div class="col-md-4">
-                        <input type="text" name="search" class="form-control" placeholder="Search by reference, decoder, phone..." value="{{ search_query }}">
-                    </div>
                     <div class="col-md-3">
+                        <input type="text" name="search" class="form-control" placeholder="Search..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
                         <select name="status" class="form-select">
                             <option value="">All Status</option>
                             {% for status in status_choices %}
                             <option value="{{ status.0 }}" {% if status_filter == status.0 %}selected{% endif %}>
                                 {{ status.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select name="decoder" class="form-select">
+                            <option value="">All Decoders</option>
+                            {% for decoder in decoder_types %}
+                            <option value="{{ decoder.id }}" {% if decoder_filter == decoder.id|stringformat:'s' %}selected{% endif %}>
+                                {{ decoder.name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -60,7 +70,9 @@
                             <tr>
                                 <th>Reference</th>
                                 <th>Customer</th>
-                                <th>Decoder</th>
+                                <th>Decoder Type</th>
+                                <th>Decoders</th>
+                                <th>Months</th>
                                 <th>Amount</th>
                                 <th>Status</th>
                                 <th>Date</th>
@@ -72,14 +84,46 @@
                             <tr>
                                 <td><code>{{ payment.order_reference }}</code></td>
                                 <td>{{ payment.user.phone_number }}</td>
-                                <td>{{ payment.decoder_number }}</td>
-                                <td><strong>TZS {{ payment.amount }}</strong></td>
+                                <td>
+                                    {% if payment.decoder_type %}
+                                    <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 4px 10px; font-size: 11px;">
+                                        <i class="bi {{ payment.decoder_type.icon|default:'bi-tv' }} me-1"></i>
+                                        {{ payment.decoder_type.name }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ payment.total_decoders }}</strong>
+                                    {% if payment.total_decoders > 1 %}
+                                    <br>
+                                    <small class="text-muted">
+                                        {% for item in payment.items.all|slice:":1" %}
+                                            {{ item.decoder_number }}
+                                        {% endfor %}
+                                        {% if payment.total_decoders > 1 %}
+                                        <br>+{{ payment.total_decoders|add:"-1" }} more
+                                        {% endif %}
+                                    </small>
+                                    {% else %}
+                                    <br>
+                                    <small class="text-muted">{{ payment.decoder_number }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge" style="background: #f0f0f0; color: #555;">
+                                        {{ payment.total_months }} Month{{ payment.total_months|pluralize }}
+                                    </span>
+                                </td>
+                                <td><strong style="color: #f28c18;">TZS {{ payment.amount }}</strong></td>
                                 <td>
                                     <span class="badge" style="
                                         background: {% if payment.status == 'COMPLETED' %}#d4edda; color: #155724;
                                         {% elif payment.status == 'PAID' %}#cce5ff; color: #004085;
                                         {% elif payment.status == 'FAILED' %}#f8d7da; color: #721c24;
                                         {% elif payment.status == 'PROCESSING' %}#cce5ff; color: #004085;
+                                        {% elif payment.status == 'REVIEW' %}#fff3cd; color: #856404;
                                         {% else %}#fff3cd; color: #856404;
                                         {% endif %}
                                         padding: 4px 12px; border-radius: 20px;
@@ -89,12 +133,9 @@
                                 </td>
                                 <td>{{ payment.created_at|date:"d M Y H:i" }}</td>
                                 <td>
-                                    <!-- View Button -->
                                     <button class="btn btn-sm" style="background: #f28c18; color: white;" onclick="openPaymentDetail({{ payment.id }})">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    
-                                    <!-- Mark as Ready Button - Only for PAID status -->
                                     {% if payment.status == 'PAID' %}
                                     <button class="btn btn-sm" style="background: #28a745; color: white;" onclick="markAsReady({{ payment.id }}, '{{ payment.order_reference }}')">
                                         <i class="bi bi-check2-circle"></i>
@@ -104,7 +145,7 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">No payments found</td>
+                                <td colspan="9" class="text-center py-4 text-muted">No payments found</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -120,7 +161,7 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Previous</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if decoder_filter %}&decoder={{ decoder_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Previous</a>
                     </li>
                     {% endif %}
                     
@@ -130,7 +171,7 @@
                     
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Next</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if decoder_filter %}&decoder={{ decoder_filter }}{% endif %}{% if date_filter %}&date={{ date_filter }}{% endif %}">Next</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -145,7 +186,7 @@
      PAYMENT DETAIL MODAL
 ========================================================= -->
 <div class="modal fade" id="paymentDetailModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header" style="border-bottom: 1px solid #e5e5e5;">
                 <h5 class="modal-title fw-bold">
@@ -174,14 +215,10 @@
      JAVASCRIPT
 ========================================================= -->
 <script>
-// =========================================================
-// OPEN PAYMENT DETAIL
-// =========================================================
 function openPaymentDetail(paymentId) {
     const modal = new bootstrap.Modal(document.getElementById('paymentDetailModal'));
     const content = document.getElementById('paymentDetailContent');
     
-    // Show loading
     content.innerHTML = `
         <div class="text-center py-3">
             <div class="spinner-border text-primary" role="status">
@@ -192,30 +229,71 @@ function openPaymentDetail(paymentId) {
     
     modal.show();
     
-    // Fetch payment details
     fetch(`/business/payment/${paymentId}/`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
         if (data.error) {
-            content.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="bi bi-exclamation-circle me-2"></i>
-                    ${data.error}
-                </div>
-            `;
+            content.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
             return;
         }
         
-        // Format status badge color
-        let statusColor = '#ffc107'; // default
+        let statusColor = '#ffc107';
         if (data.status === 'COMPLETED') statusColor = '#28a745';
         else if (data.status === 'PAID') statusColor = '#17a2b8';
         else if (data.status === 'FAILED') statusColor = '#dc3545';
         else if (data.status === 'PROCESSING') statusColor = '#007bff';
+        else if (data.status === 'REVIEW') statusColor = '#ffc107';
+        
+        // Build items table
+        let itemsTable = '';
+        if (data.items && data.items.length > 0) {
+            itemsTable = `
+                <div class="col-12 mt-3">
+                    <h6 class="fw-bold mb-2">
+                        <i class="bi bi-list-check me-2" style="color: #f28c18;"></i>
+                        Decoder Breakdown (${data.items.length})
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm" style="font-size: 13px;">
+                            <thead>
+                                <tr style="background: #fafafa;">
+                                    <th>#</th>
+                                    <th>Decoder Number</th>
+                                    <th>Months</th>
+                                    <th>Unit Price</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.items.map((item, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${item.decoder_number}</strong></td>
+                                        <td>
+                                            <span class="badge" style="background: #f0f0f0; color: #555;">
+                                                ${item.months} Month${item.months > 1 ? 's' : ''}
+                                            </span>
+                                        </td>
+                                        <td>TZS ${parseFloat(item.unit_price).toLocaleString()}</td>
+                                        <td><strong style="color: #f28c18;">TZS ${parseFloat(item.subtotal).toLocaleString()}</strong></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot>
+                                <tr style="background: #f0f8ff;">
+                                    <td colspan="4" class="text-end fw-bold">TOTAL:</td>
+                                    <td class="fw-bold" style="color: #f28c18; font-size: 15px;">
+                                        TZS ${parseFloat(data.amount).toLocaleString()}
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
         
         content.innerHTML = `
             <div class="row g-3">
@@ -231,16 +309,24 @@ function openPaymentDetail(paymentId) {
                     <div><strong>${data.customer}</strong></div>
                 </div>
                 <div class="col-6">
+                    <span class="text-muted small">Decoder Type</span>
+                    <div><strong>${data.decoder_type || 'N/A'}</strong></div>
+                </div>
+                <div class="col-6">
                     <span class="text-muted small">Package</span>
                     <div><strong>${data.package}</strong></div>
                 </div>
                 <div class="col-6">
-                    <span class="text-muted small">Decoder</span>
-                    <div><strong>${data.decoder_number}</strong></div>
+                    <span class="text-muted small">Total Decoders</span>
+                    <div><strong>${data.total_decoders}</strong></div>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted small">Total Months</span>
+                    <div><strong>${data.total_months} Month${data.total_months > 1 ? 's' : ''}</strong></div>
                 </div>
                 <div class="col-6">
                     <span class="text-muted small">Amount</span>
-                    <div><strong style="color: #f28c18;">TZS ${data.amount}</strong></div>
+                    <div><strong style="color: #f28c18; font-size: 18px;">TZS ${parseFloat(data.amount).toLocaleString()}</strong></div>
                 </div>
                 <div class="col-6">
                     <span class="text-muted small">Payment Phone</span>
@@ -268,34 +354,18 @@ function openPaymentDetail(paymentId) {
                     <div><strong>${data.completed_at}</strong></div>
                 </div>
                 ` : ''}
-                ${data.processed_at ? `
-                <div class="col-12">
-                    <span class="text-muted small">Processed</span>
-                    <div><strong>${data.processed_at}</strong></div>
-                </div>
-                ` : ''}
+                ${itemsTable}
             </div>
         `;
     })
     .catch(error => {
-        content.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                Failed to load payment details
-            </div>
-        `;
+        content.innerHTML = `<div class="alert alert-danger">Failed to load payment details</div>`;
     });
 }
 
-// =========================================================
-// MARK AS READY
-// =========================================================
 function markAsReady(paymentId, orderReference) {
-    if (!confirm(`Are you sure you want to mark payment ${orderReference} as READY?`)) {
-        return;
-    }
+    if (!confirm(`Are you sure you want to mark payment ${orderReference} as READY?`)) return;
     
-    // Show loading state on button
     const buttons = document.querySelectorAll(`button[onclick*="markAsReady(${paymentId},"]`);
     buttons.forEach(btn => {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
@@ -305,7 +375,7 @@ function markAsReady(paymentId, orderReference) {
     fetch(`/business/payment/mark-ready/${paymentId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-CSRFToken': getCSRFToken(),
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         }
@@ -313,33 +383,37 @@ function markAsReady(paymentId, orderReference) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Show success message
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-success alert-dismissible fade show';
-            alertDiv.innerHTML = `
-                <i class="bi bi-check-circle me-2"></i>
-                ${data.message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
+            alertDiv.innerHTML = `<i class="bi bi-check-circle me-2"></i>${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
             document.querySelector('.main-content').prepend(alertDiv);
-            
-            // Reload after 1.5 seconds
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             alert(data.error || 'Failed to mark as ready');
         }
     })
-    .catch(error => {
-        alert('An error occurred. Please try again.');
-    })
+    .catch(() => alert('An error occurred'))
     .finally(() => {
         buttons.forEach(btn => {
             btn.innerHTML = '<i class="bi bi-check2-circle"></i>';
             btn.disabled = false;
         });
     });
+}
+
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 </script>
 

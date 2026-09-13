@@ -94,8 +94,10 @@ def add_decoder_type(request):
     name = request.POST.get('name', '').strip()
     code = request.POST.get('code', '').strip().upper()
     description = request.POST.get('description', '').strip()
-    icon = request.POST.get('icon', 'bi-tv').strip()
     is_active = request.POST.get('is_active') == 'on'
+    
+    # ✅ Icon ni fixed - bi-broadcast
+    icon = 'bi-broadcast'
     
     if not name:
         return JsonResponse({'error': 'Decoder name is required'}, status=400)
@@ -108,7 +110,11 @@ def add_decoder_type(request):
         return JsonResponse({'error': 'Decoder code already exists'}, status=400)
     
     decoder_type = DecoderType.objects.create(
-        name=name, code=code, description=description, icon=icon, is_active=is_active
+        name=name,
+        code=code,
+        description=description,
+        icon=icon,  # ✅ Fixed
+        is_active=is_active
     )
     
     return JsonResponse({
@@ -135,20 +141,17 @@ def edit_decoder_type(request, decoder_type_id):
     decoder_type = get_object_or_404(DecoderType, id=decoder_type_id)
     
     if request.method != 'POST':
-        # Return data for modal
         return JsonResponse({
             'id': decoder_type.id,
             'name': decoder_type.name,
             'code': decoder_type.code,
             'description': decoder_type.description,
-            'icon': decoder_type.icon,
             'is_active': decoder_type.is_active,
         })
     
     name = request.POST.get('name', '').strip()
     code = request.POST.get('code', '').strip().upper()
     description = request.POST.get('description', '').strip()
-    icon = request.POST.get('icon', 'bi-tv').strip()
     is_active = request.POST.get('is_active') == 'on'
     
     if not name:
@@ -164,7 +167,7 @@ def edit_decoder_type(request, decoder_type_id):
     decoder_type.name = name
     decoder_type.code = code
     decoder_type.description = description
-    decoder_type.icon = icon
+    # ✅ Icon remains bi-broadcast (no change)
     decoder_type.is_active = is_active
     decoder_type.save()
     
@@ -454,12 +457,15 @@ def payments(request):
 
 @login_required
 def payment_detail(request, payment_id):
-    """Business Owner - View payment details"""
+    """Business Owner - View payment details with breakdown"""
     
     if not request.user.is_business_owner:
         return HttpResponseForbidden("Access denied")
     
-    payment = get_object_or_404(Payment, id=payment_id)
+    payment = get_object_or_404(
+        Payment.objects.select_related('user', 'package', 'decoder_type').prefetch_related('items'),
+        id=payment_id
+    )
     
     # Track viewed
     business = Business.objects.get(user=request.user)
@@ -472,6 +478,16 @@ def payment_detail(request, payment_id):
         business_payment.save()
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        #  Return with items breakdown
+        items = []
+        for item in payment.items.all():
+            items.append({
+                'decoder_number': item.decoder_number,
+                'months': item.months,
+                'unit_price': str(item.unit_price),
+                'subtotal': str(item.subtotal),
+            })
+        
         return JsonResponse({
             'id': payment.id,
             'order_reference': payment.order_reference,
@@ -488,6 +504,8 @@ def payment_detail(request, payment_id):
             'status_display': payment.get_status_display(),
             'created_at': payment.created_at.strftime('%d %b %Y %H:%M'),
             'completed_at': payment.completed_at.strftime('%d %b %Y %H:%M') if payment.completed_at else None,
+            'processed_at': payment.processed_at.strftime('%d %b %Y %H:%M') if payment.processed_at else None,
+            'items': items,
         })
     
     context = {'payment': payment}

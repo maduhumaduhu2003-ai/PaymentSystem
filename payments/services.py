@@ -12,20 +12,24 @@ CLICKPESA_BASE_URL = getattr(settings, "CLICKPESA_BASE_URL", "https://api.clickp
 TOKEN_CACHE_KEY = "clickpesa_token"
 TOKEN_CACHE_TIMEOUT = getattr(settings, "CLICKPESA_TOKEN_CACHE_TIMEOUT", 600)
 
+
 # ============================================================================
 # PHONE NUMBER
 # ============================================================================
 
 def clean_phone(phone):
+    """Remove spaces, dashes, brackets from phone number."""
     return re.sub(r"[\s\-\(\)]", "", (phone or "").strip())
 
 
 def validate_tanzania_phone(phone):
+    """Validate Tanzania phone number format."""
     phone = clean_phone(phone)
     return bool(re.fullmatch(r"^(0[67][0-9]{8}|255[67][0-9]{8}|\+255[67][0-9]{8})$", phone))
 
 
 def normalize_tanzania_phone(phone):
+    """Normalize Tanzania phone number to 255XXXXXXXXX format."""
     phone = clean_phone(phone)
     if not phone or not validate_tanzania_phone(phone):
         return None
@@ -37,23 +41,25 @@ def normalize_tanzania_phone(phone):
 
 
 # ============================================================================
-# TOKEN 
+# TOKEN
 # ============================================================================
 
 def get_clickpesa_token():
+    """Get ClickPesa authentication token (with caching)."""
     cached = cache.get(TOKEN_CACHE_KEY)
     if cached:
         return cached
 
     client_id = getattr(settings, "CLICKPESA_CLIENT_ID", None)
     api_key = getattr(settings, "CLICKPESA_API_KEY", None)
+    
     if not client_id or not api_key:
         logger.error("ClickPesa credentials not configured")
         return None
 
     try:
         response = requests.post(
-            f"{CLICKPESA_BASE_URL}/third-parties/generate-token",  
+            f"{CLICKPESA_BASE_URL}/third-parties/generate-token",
             headers={
                 "client-id": client_id,
                 "api-key": api_key,
@@ -64,10 +70,8 @@ def get_clickpesa_token():
         response.raise_for_status()
         data = response.json()
         
-        # Check success field
         if not data.get("success"):
-            error_msg = data.get("message") or "Unknown error"
-            logger.error(f"ClickPesa error: {error_msg}")
+            logger.error(f"ClickPesa error: {data.get('message', 'Unknown error')}")
             return None
             
         token = data.get("token")
@@ -95,7 +99,12 @@ def get_clickpesa_token():
 
 
 def _headers(token):
-    return {"Authorization": token, "Content-Type": "application/json", "Accept": "application/json"}
+    """Build ClickPesa API headers."""
+    return {
+        "Authorization": token,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
 
 
 # ============================================================================
@@ -103,6 +112,18 @@ def _headers(token):
 # ============================================================================
 
 def initiate_clickpesa_ussd_push(token, amount, order_reference, phone_number):
+    """
+    Initiate ClickPesa USSD Push request.
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'message': str,
+            'data': dict,
+            'transaction_id': str,
+            'ambiguous': bool
+        }
+    """
     phone = normalize_tanzania_phone(phone_number)
     if not phone:
         return {"success": False, "message": "Invalid phone number", "ambiguous": False}
@@ -139,6 +160,7 @@ def initiate_clickpesa_ussd_push(token, amount, order_reference, phone_number):
                 "ambiguous": response.status_code >= 500,
             }
 
+        # Success
         if response.status_code in (200, 201):
             return {
                 "success": True,
@@ -148,16 +170,20 @@ def initiate_clickpesa_ussd_push(token, amount, order_reference, phone_number):
                 "ambiguous": False,
             }
 
+        # Authentication error
         if response.status_code == 401:
             cache.delete(TOKEN_CACHE_KEY)
             return {"success": False, "message": "Authentication failed", "ambiguous": False}
 
+        # Rate limit
         if response.status_code == 429:
             return {"success": False, "message": "Gateway busy, try again", "ambiguous": True}
 
+        # Server error
         if 500 <= response.status_code <= 599:
             return {"success": False, "message": "Gateway temporarily unavailable", "ambiguous": True}
 
+        # Other errors
         error_msg = data.get("message") or data.get("error") or f"HTTP {response.status_code}"
         return {"success": False, "message": error_msg, "ambiguous": False, "data": data}
 
@@ -171,10 +197,117 @@ def initiate_clickpesa_ussd_push(token, amount, order_reference, phone_number):
 
 
 # ============================================================================
+# CARD PAYMENT (CHECKOUT)
+# ============================================================================
+
+def initiate_clickpesa_card_payment(token, amount, order_reference, phone_number, customer_email="", customer_name=""):
+    """
+    Initiate ClickPesa Card Payment (Checkout).
+    
+    Returns:
+        dict: {
+            'success': bool,
+            'message': str,
+            'data': dict,
+            'transaction_id': str,
+            'payment_url': str,
+            'ambiguous': bool
+        }
+    """
+    phone = normalize_tanzania_phone(phone_number)
+    if not phone:
+        return {"success": False, "message": "Invalid phone number", "ambiguous": False}
+
+    try:
+        amount_decimal = Decimal(str(amount))
+        if amount_decimal <= 0:
+            return {"success": False, "message": "Invalid amount", "ambiguous": False}
+    except (InvalidOperation, ValueError, TypeError):
+        return {"success": False, "message": "Invalid amount", "ambiguous": False}
+
+    callback_url = getattr(settings, "CLICKPESA_CALLBACK_URL", "")
+
+    payload = {
+        "amount": str(amount_decimal),
+        "currency": "TZS",
+        "orderReference": order_reference,
+        "phoneNumber": phone,
+        "customerEmail": customer_email or "customer@satpay.com",
+        "customerName": customer_name or "SATPAY Customer",
+        "callbackUrl": callback_url,
+    }
+
+    try:
+        response = requests.post(
+            f"{CLICKPESA_BASE_URL}/third-parties/payments/initiate-card-payment",
+            headers=_headers(token),
+            json=payload,
+            timeout=(5, 30),
+        )
+
+        try:
+            data = response.json()
+        except ValueError:
+            logger.error(f"Invalid JSON from ClickPesa: HTTP {response.status_code}")
+            return {
+                "success": False,
+                "message": "Invalid gateway response",
+                "ambiguous": response.status_code >= 500,
+            }
+
+        # Success
+        if response.status_code in (200, 201):
+            # Extract payment URL (different possible field names)
+            payment_url = (
+                data.get("paymentUrl") or 
+                data.get("checkoutUrl") or 
+                data.get("redirectUrl") or
+                data.get("url") or
+                (data.get("data", {}) or {}).get("paymentUrl") or
+                (data.get("data", {}) or {}).get("checkoutUrl")
+            )
+            
+            return {
+                "success": True,
+                "message": "Card payment initiated",
+                "data": data,
+                "transaction_id": data.get("id") or data.get("transactionId"),
+                "payment_url": payment_url,
+                "ambiguous": False,
+            }
+
+        # Authentication error
+        if response.status_code == 401:
+            cache.delete(TOKEN_CACHE_KEY)
+            return {"success": False, "message": "Authentication failed", "ambiguous": False}
+
+        # Rate limit
+        if response.status_code == 429:
+            return {"success": False, "message": "Gateway busy, try again", "ambiguous": True}
+
+        # Server error
+        if 500 <= response.status_code <= 599:
+            return {"success": False, "message": "Gateway temporarily unavailable", "ambiguous": True}
+
+        # Other errors
+        error_msg = data.get("message") or data.get("error") or f"HTTP {response.status_code}"
+        return {"success": False, "message": error_msg, "ambiguous": False, "data": data}
+
+    except requests.Timeout:
+        return {"success": False, "message": "Payment request is being processed", "ambiguous": True}
+    except requests.ConnectionError:
+        return {"success": False, "message": "Unable to contact gateway", "ambiguous": True}
+    except requests.RequestException as e:
+        logger.error(f"ClickPesa card request failed: {e}")
+        return {"success": False, "message": "Gateway connection error", "ambiguous": True}
+
+
+# ============================================================================
 # PAYMENT QUERY
 # ============================================================================
 
 def query_clickpesa_payment(token, order_reference):
+    """Query ClickPesa payment status."""
     if not order_reference:
         return {"success": False, "message": "Missing reference", "ambiguous": False}
 
@@ -221,6 +354,7 @@ def query_clickpesa_payment(token, order_reference):
 # ============================================================================
 
 def extract_gateway_record(data):
+    """Extract payment record from various response structures."""
     if isinstance(data, dict):
         nested = data.get("data")
         if isinstance(nested, dict):
@@ -234,14 +368,17 @@ def extract_gateway_record(data):
 
 
 def get_gateway_status(data):
+    """Get status from gateway response."""
     return str(data.get("status") or data.get("paymentStatus") or "").upper() if isinstance(data, dict) else ""
 
 
 def get_gateway_transaction_id(data):
+    """Get transaction ID from gateway response."""
     return data.get("id") or data.get("transactionId") if isinstance(data, dict) else None
 
 
 def get_gateway_amount(data):
+    """Get amount from gateway response."""
     if not isinstance(data, dict):
         return None
     value = data.get("collectedAmount") or data.get("amount")
@@ -252,6 +389,7 @@ def get_gateway_amount(data):
 
 
 def get_gateway_currency(data):
+    """Get currency from gateway response."""
     if not isinstance(data, dict):
         return None
     value = data.get("collectedCurrency") or data.get("currency")
@@ -259,6 +397,7 @@ def get_gateway_currency(data):
 
 
 def classify_gateway_status(status):
+    """Classify gateway status into internal categories."""
     status = (status or "").upper().strip()
     if status in ("SUCCESS", "SETTLED", "COMPLETED"):
         return "PAID"

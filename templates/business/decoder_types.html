@@ -78,8 +78,9 @@
                                 </ul>
                             </div>
                         </div>
+                        <!-- ✅ Fixed icon -->
                         <div style="width: 64px; height: 64px; background: #fff5e9; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                            <i class="bi {{ decoder.icon|default:'bi-tv' }}" style="font-size: 28px; color: #f28c18;"></i>
+                            <i class="bi bi-broadcast" style="font-size: 28px; color: #f28c18;"></i>
                         </div>
                         <h5 class="fw-bold mb-1">{{ decoder.name }}</h5>
                         <p class="text-muted small mb-2">Code: <strong>{{ decoder.code }}</strong></p>
@@ -110,7 +111,7 @@
 </div>
 
 <!-- =========================================================
-     ADD DECODER TYPE MODAL
+     ADD DECODER TYPE MODAL - SIMPLIFIED
 ========================================================= -->
 <div class="modal fade" id="addDecoderModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -126,6 +127,7 @@
                 <form id="addDecoderForm">
                     {% csrf_token %}
                     
+                    <!-- ✅ Only essential fields -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Decoder Name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control" placeholder="e.g., CANAL BI, AZAM BI" required>
@@ -140,14 +142,6 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Description</label>
                         <textarea name="description" class="form-control" rows="3" placeholder="Enter description"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Icon (Bootstrap Icons)</label>
-                        <input type="text" name="icon" class="form-control" placeholder="bi-tv" value="bi-tv">
-                        <small class="text-muted">
-                            Examples: <code>bi-tv</code>, <code>bi-broadcast</code>, <code>bi-satellite</code>
-                        </small>
                     </div>
                     
                     <div class="mb-3">
@@ -170,7 +164,7 @@
 </div>
 
 <!-- =========================================================
-     EDIT DECODER TYPE MODAL
+     EDIT DECODER TYPE MODAL - SIMPLIFIED
 ========================================================= -->
 <div class="modal fade" id="editDecoderModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
@@ -200,11 +194,6 @@
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Description</label>
                         <textarea name="description" id="editDecoderDescription" class="form-control" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Icon</label>
-                        <input type="text" name="icon" id="editDecoderIcon" class="form-control">
                     </div>
                     
                     <div class="mb-3">
@@ -317,7 +306,6 @@ function openEditModal(decoderId) {
         document.getElementById('editDecoderName').value = data.name;
         document.getElementById('editDecoderCode').value = data.code;
         document.getElementById('editDecoderDescription').value = data.description || '';
-        document.getElementById('editDecoderIcon').value = data.icon || 'bi-tv';
         document.getElementById('editDecoderIsActive').checked = data.is_active;
         
         var modal = new bootstrap.Modal(document.getElementById('editDecoderModal'));

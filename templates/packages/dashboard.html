@@ -10,7 +10,7 @@
             <div>
                 <h4 class="fw-bold mb-0" style="color: #333333;">
                     <i class="bi bi-box-seam me-2" style="color: #f28c18;"></i>
-                    {% if decoder_type %}{{ decoder_type.name }}{% else %}Available{% endif %} Packages
+                    {{ decoder_type.name }} Packages
                 </h4>
                 <p class="text-muted small mt-1">
                     Select a package that suits your needs
@@ -20,6 +20,21 @@
                 <a href="{% url 'decoder_selection' %}" class="btn btn-sm" style="background: #f5f5f5; color: #555;">
                     <i class="bi bi-arrow-left me-1"></i> Change Decoder
                 </a>
+            </div>
+        </div>
+
+        <!-- Decoder Info -->
+        <div class="card mb-4" style="border: 1px solid #e5e5e5; border-radius: 6px; background: #fafafa;">
+            <div class="card-body" style="padding: 15px 20px;">
+                <div class="d-flex align-items-center gap-3">
+                    <div style="width: 45px; height: 45px; background: #fff5e9; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="bi {{ decoder_type.icon|default:'bi-tv' }}" style="font-size: 20px; color: #f28c18;"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0">{{ decoder_type.name }}</h6>
+                        <small class="text-muted">{{ decoder_type.description|default:"No description" }}</small>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -55,6 +70,10 @@
                 <div class="text-center py-5">
                     <i class="bi bi-box" style="font-size: 48px; color: #cccccc;"></i>
                     <h5 class="mt-3" style="color: #999999;">No Packages Available</h5>
+                    <p class="text-muted small">No packages for {{ decoder_type.name }} yet</p>
+                    <a href="{% url 'decoder_selection' %}" class="btn mt-2" style="background: #f28c18; color: white;">
+                        <i class="bi bi-arrow-left me-1"></i> Back to Decoders
+                    </a>
                 </div>
             </div>
             {% endfor %}

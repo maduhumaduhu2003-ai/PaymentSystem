@@ -13,25 +13,64 @@
                     Subscriptions
                 </h4>
                 <p class="text-muted small mt-1">
-                    Manage active subscriptions
+                    Manage all customer subscriptions
                 </p>
             </div>
             <span class="badge" style="background: #fff5e9; color: #f28c18; padding: 8px 16px; border-radius: 20px;">
-                <i class="bi bi-check-circle me-1"></i>
-                {{ total_subscriptions }} Active
+                <i class="bi bi-files me-1"></i>
+                {{ total_count }} Subscriptions
             </span>
         </div>
 
-        <!-- Filter -->
+        <!-- Stats -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Active</h6>
+                        <h3 class="fw-bold" style="color: #28a745;">{{ active_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Expired</h6>
+                        <h3 class="fw-bold" style="color: #dc3545;">{{ expired_count }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card" style="border: 1px solid #e5e5e5; border-radius: 6px;">
+                    <div class="card-body">
+                        <h6 class="text-muted small">Total</h6>
+                        <h3 class="fw-bold" style="color: #f28c18;">{{ total_count }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
         <div class="card mb-4" style="border: 1px solid #e5e5e5; border-radius: 6px;">
             <div class="card-body">
                 <form method="GET" class="row g-3">
                     <div class="col-md-4">
-                        <select name="package" class="form-select">
-                            <option value="">All Packages</option>
-                            {% for package in packages %}
-                            <option value="{{ package.id }}" {% if package_filter == package.id|stringformat:"s" %}selected{% endif %}>
-                                {{ package.name }}
+                        <input type="text" name="search" class="form-control" placeholder="Search decoder or phone..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="ACTIVE" {% if status_filter == 'ACTIVE' %}selected{% endif %}>Active</option>
+                            <option value="EXPIRED" {% if status_filter == 'EXPIRED' %}selected{% endif %}>Expired</option>
+                            <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="decoder" class="form-select">
+                            <option value="">All Decoders</option>
+                            {% for decoder in decoder_types %}
+                            <option value="{{ decoder.id }}" {% if decoder_filter == decoder.id|stringformat:'s' %}selected{% endif %}>
+                                {{ decoder.name }}
                             </option>
                             {% endfor %}
                         </select>
@@ -40,11 +79,6 @@
                         <button type="submit" class="btn" style="background: #f28c18; color: white; width: 100%;">
                             <i class="bi bi-search me-1"></i> Filter
                         </button>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <a href="{% url 'business_subscriptions' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-arrow-clockwise"></i> Reset
-                        </a>
                     </div>
                 </form>
             </div>
@@ -58,37 +92,42 @@
                         <thead>
                             <tr>
                                 <th>Customer</th>
-                                <th>Package</th>
                                 <th>Decoder</th>
-                                <th>Amount</th>
+                                <th>Package</th>
+                                <th>Months</th>
+                                <th>Expires</th>
                                 <th>Status</th>
-                                <th>Started</th>
-                                <th>Action</th>
+                                <th style="min-width: 140px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for subscription in page_obj %}
+                            {% for sub in page_obj %}
                             <tr>
-                                <td>{{ subscription.user.phone_number }}</td>
-                                <td>{{ subscription.package.name }}</td>
-                                <td>{{ subscription.decoder_number }}</td>
-                                <td>TZS {{ subscription.amount }}</td>
+                                <td>{{ sub.user.phone_number }}</td>
+                                <td><strong>{{ sub.decoder_number }}</strong></td>
+                                <td>{{ sub.package.name }}</td>
+                                <td>{{ sub.months }} mo</td>
+                                <td>{{ sub.expires_at|date:"d M Y" }}</td>
                                 <td>
-                                    <span class="badge" style="
-                                        background: {% if subscription.status == 'COMPLETED' %}#d4edda; color: #155724;
-                                        {% elif subscription.status == 'PAID' %}#cce5ff; color: #004085;
-                                        {% else %}#fff3cd; color: #856404;
-                                        {% endif %}
-                                        padding: 4px 12px; border-radius: 20px;
-                                    ">
-                                        {{ subscription.get_status_display }}
-                                    </span>
+                                    {% if sub.is_active %}
+                                        <span class="badge" style="background: #d4edda; color: #155724;">ACTIVE</span>
+                                    {% elif sub.status == 'CANCELLED' %}
+                                        <span class="badge" style="background: #f8d7da; color: #721c24;">CANCELLED</span>
+                                    {% else %}
+                                        <span class="badge" style="background: #f8d7da; color: #721c24;">EXPIRED</span>
+                                    {% endif %}
                                 </td>
-                                <td>{{ subscription.created_at|date:"d M Y" }}</td>
                                 <td>
-                                    <a href="{% url 'business_payment_detail' subscription.id %}" class="btn btn-sm" style="background: #f28c18; color: white;">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
+                                    {% if sub.status != 'ACTIVE' %}
+                                    <button class="btn btn-sm" style="background: #28a745; color: white;" onclick="updateStatus({{ sub.id }}, 'activate', '{{ sub.decoder_number }}')">
+                                        <i class="bi bi-check-circle"></i> Activate
+                                    </button>
+                                    {% endif %}
+                                    {% if sub.is_active %}
+                                    <button class="btn btn-sm" style="background: #dc3545; color: white;" onclick="updateStatus({{ sub.id }}, 'expire', '{{ sub.decoder_number }}')">
+                                        <i class="bi bi-x-circle"></i> Expire
+                                    </button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
@@ -109,17 +148,15 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if package_filter %}&package={{ package_filter }}{% endif %}">Previous</a>
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if decoder_filter %}&decoder={{ decoder_filter }}{% endif %}">Previous</a>
                     </li>
                     {% endif %}
-                    
                     <li class="page-item active">
                         <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
                     </li>
-                    
                     {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if package_filter %}&package={{ package_filter }}{% endif %}">Next</a>
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if decoder_filter %}&decoder={{ decoder_filter }}{% endif %}">Next</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -129,5 +166,53 @@
 
     </div>
 </div>
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+<script>
+function updateStatus(subscriptionId, action, decoderNumber) {
+    let actionText = action === 'activate' ? 'activate' : 'expire';
+    if (!confirm(`Are you sure you want to ${actionText} subscription ${decoderNumber}?`)) return;
+    
+    const formData = new FormData();
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', getCSRFToken());
+    
+    fetch(`/subscriptions/business/update/${subscriptionId}/`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `<i class="bi bi-check-circle me-2"></i>${data.message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.querySelector('.main-content').prepend(alertDiv);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            alert(data.error || 'Failed to update');
+        }
+    })
+    .catch(() => alert('Error occurred'));
+}
+
+function getCSRFToken() {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, 10) === 'csrftoken=') {
+                cookieValue = decodeURIComponent(cookie.substring(10));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
 
 {% endblock %}
