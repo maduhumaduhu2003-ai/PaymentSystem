@@ -29,6 +29,8 @@ ALLOWED_HOSTS = [
 # APPLICATIONS
 # ============================================================================
 INSTALLED_APPS = [
+    "jazzmin",
+    
     # Django
     "django.contrib.admin",
     "django.contrib.auth",
@@ -138,7 +140,14 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ============================================================================
 # DEFAULT PRIMARY KEY
@@ -267,3 +276,99 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+JAZZMIN_SETTINGS = {
+    # Titles
+    "site_title": "SATPAY Admin",
+    "site_header": "SATPAY",
+    "site_brand": "SATPAY",
+    "site_logo": "images/favicon.png",           # logo yako (weka kwenye static/images/)
+    "site_logo_classes": "img-circle",
+    "site_icon": "images/favicon.png",           # favicon ya admin
+    "welcome_sign": "Welcome to SATPAY Administration",
+    "copyright": "SATPAY",
+    "search_model": ["accounts.User", "payments.Payment"],
+
+    # Sidebar
+    "show_sidebar": True,
+    "navigation_expanded": True,
+    "hide_apps": [],
+    "hide_models": [],
+    "order_with_respect_to": [
+        "accounts",
+        "business",
+        "packages",
+        "payments",
+        "subscriptions",
+        "auth",
+    ],
+
+    # Icons (FontAwesome)
+    "icons": {
+        "auth": "fas fa-users-cog",
+        "auth.user": "fas fa-user",
+        "auth.Group": "fas fa-users",
+        "accounts": "fas fa-user-circle",
+        "accounts.User": "fas fa-user",
+        "business": "fas fa-building",
+        "packages": "fas fa-box",
+        "payments": "fas fa-credit-card",
+        "subscriptions": "fas fa-calendar-check",
+    },
+    "default_icon_parents": "fas fa-chevron-circle-right",
+    "default_icon_children": "fas fa-circle",
+
+    # UI
+    "related_modal_active": True,
+    "custom_css": None,
+    "custom_js": None,
+    "use_google_fonts_cdn": True,
+    "show_ui_builder": False,
+
+    # Top menu
+    "topmenu_links": [
+        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "SATPAY Website", "url": "/", "new_window": True},
+    ],
+
+    # User menu
+    "usermenu_links": [
+        {"name": "SATPAY Website", "url": "/", "new_window": True},
+    ],
+
+    # Language chooser
+    "language_chooser": False,
+}
+
+JAZZMIN_UI_TWEAKS = {
+    "theme": "flatly",
+    "default_theme_mode": "auto",   # theme ya dark mode
+    
+    "navbar": "navbar-orange navbar-light",   # rangi ya navbar
+    "no_navbar_border": True,
+    "navbar_fixed": True,
+    
+    "sidebar": "sidebar-dark-orange",         # rangi ya sidebar
+    "sidebar_nav_small_text": False,
+    "sidebar_disable_expand": False,
+    "sidebar_nav_child_indent": True,
+    "sidebar_nav_compact_style": False,
+    "sidebar_nav_flat_style": True,
+    "sidebar_nav_legacy_style": False,
+    
+    "footer_small_text": False,
+    "body_small_text": False,
+    "brand_small_text": False,
+    
+    "button_classes": {
+        "primary": "btn-primary",
+        "secondary": "btn-secondary",
+        "info": "btn-info",
+        "warning": "btn-warning",
+        "danger": "btn-danger",
+        "success": "btn-success",
+    },
+    
+    "actions_sticky_top": True,
+}

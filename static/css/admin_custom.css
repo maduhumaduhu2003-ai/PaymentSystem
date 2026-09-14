@@ -1,0 +1,32 @@
+/* SATPAY Orange Brand */
+.brand-link {
+    background-color: #f28c18 !important;
+    color: #fff !important;
+}
+
+.navbar-orange {
+    background-color: #f28c18 !important;
+}
+
+.sidebar-dark-orange .nav-sidebar > .nav-item > .nav-link.active {
+    background-color: #f28c18 !important;
+    color: #fff !important;
+}
+
+.btn-primary {
+    background-color: #f28c18 !important;
+    border-color: #f28c18 !important;
+}
+
+.btn-primary:hover {
+    background-color: #df7d0d !important;
+    border-color: #df7d0d !important;
+}
+
+a {
+    color: #f28c18;
+}
+
+a:hover {
+    color: #df7d0d;
+}
