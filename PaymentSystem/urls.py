@@ -1,27 +1,42 @@
-"""
-URL configuration for PaymentSystem project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
+from django.http import HttpResponse
+
+from .sitemaps import StaticViewSitemap
+
+
+def robots_txt(request):
+    content = """User-agent: *
+Allow: /
+
+Sitemap: https://satpay.onrender.com/sitemap.xml
+"""
+    return HttpResponse(content, content_type="text/plain")
+
+sitemaps = {
+    "static": StaticViewSitemap,
+}
+
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('accounts.urls')),
-    path('packages/', include('packages.urls')),
-    path('payments/', include('payments.urls')),
-    path('business/', include('business.urls')),
-    path('subscriptions/', include('subscriptions.urls')),
+    path("admin/", admin.site.urls),
+
+    # Public / account pages
+    path("", include("accounts.urls")),
+
+    # Application sections
+    path("packages/", include("packages.urls")),
+    path("payments/", include("payments.urls")),
+    path("business/", include("business.urls")),
+    path("subscriptions/", include("subscriptions.urls")),
+
+    # Google Sitemap
+    path(
+        "sitemap.xml",
+        sitemap,
+        {"sitemaps": sitemaps},
+        name="django-sitemap",
+    ),
+    path("robots.txt", robots_txt, name="robots-txt"),
 ]
