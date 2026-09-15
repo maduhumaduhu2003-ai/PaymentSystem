@@ -60,6 +60,39 @@
         }
 
         /* =========================================================
+           BRAND / LOGO
+        ========================================================= */
+
+        .navbar-brand-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            margin-right: 15px;
+        }
+
+        .navbar-brand-container:hover {
+            background: #fff5e9;
+        }
+
+        .navbar-brand-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .navbar-brand-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f28c18;
+            letter-spacing: 0.5px;
+        }
+
+        /* =========================================================
            TOP NAV - MENU LINKS
         ========================================================= */
 
@@ -319,6 +352,15 @@
             .card-body {
                 padding: 20px;
             }
+
+            .navbar-brand-text {
+                font-size: 18px;
+            }
+
+            .navbar-brand-logo {
+                width: 32px;
+                height: 32px;
+            }
         }
 
         /* Mobile menu button */
@@ -433,10 +475,11 @@
             <i class="bi bi-list"></i>
         </button>
 
-        <!-- BRAND -->
-        <span class="fw-bold me-4" style="color: #f28c18; font-size: 18px;">
-            SATPAY
-        </span>
+        <!-- ✅ BRAND / LOGO - IMEWEKWA SAWA -->
+        <a href="/" class="navbar-brand-container">
+            <img src="{% static 'images/favicon.ico' %}" alt="SATPAY Logo" class="navbar-brand-logo">
+            <span class="navbar-brand-text">SATPAY</span>
+        </a>
 
         <!-- =========================================================
              NAV LINKS (Desktop) - BASED ON USER ROLE
@@ -486,7 +529,7 @@
                         <span>Reports</span>
                     </a>
 
-                    <a href="" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">
+                    <a href="{% url 'business_settings' %}" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">
                         <i class="bi bi-gear"></i>
                         <span>Settings</span>
                     </a>
@@ -511,7 +554,6 @@
                         <span>Payments</span>
                     </a>
 
-                    <!-- ✅ ONGEZA: My Subscriptions -->
                     <a href="{% url 'my_subscriptions' %}" class="{% if request.resolver_match.url_name == 'my_subscriptions' %}active{% endif %}">
                         <i class="bi bi-calendar-check"></i>
                         <span>My Subscriptions</span>
@@ -582,7 +624,6 @@
                         </a>
                     </li>
                     {% else %}
-                    <!-- ✅ ONGEZA: My Subscriptions kwa Customer -->
                     <li>
                         <a class="dropdown-item" href="{% url 'my_subscriptions' %}">
                             <i class="bi bi-calendar-check me-2"></i>
@@ -621,9 +662,7 @@
 
     {% if user.is_authenticated %}
 
-        <!-- ============================================== -->
         <!-- BUSINESS OWNER MOBILE NAV -->
-        <!-- ============================================== -->
         {% if user.is_business_owner %}
 
             <a href="{% url 'business_dashboard' %}" class="{% if request.resolver_match.url_name == 'business_dashboard' %}active{% endif %}">
@@ -661,7 +700,7 @@
                 <span>Reports</span>
             </a>
 
-            <a href="" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">
+            <a href="{% url 'business_settings' %}" class="{% if request.resolver_match.url_name == 'business_settings' %}active{% endif %}">
                 <i class="bi bi-gear"></i>
                 <span>Settings</span>
             </a>
@@ -678,9 +717,7 @@
                 <span>Logout</span>
             </a>
 
-        <!-- ============================================== -->
         <!-- CUSTOMER MOBILE NAV -->
-        <!-- ============================================== -->
         {% else %}
 
             <a href="{% url 'decoder_selection' %}" class="{% if request.resolver_match.url_name == 'decoder_selection' %}active{% endif %}">
@@ -698,7 +735,6 @@
                 <span>Payments</span>
             </a>
 
-            <!-- ✅ ONGEZA: My Subscriptions Mobile -->
             <a href="{% url 'my_subscriptions' %}" class="{% if request.resolver_match.url_name == 'my_subscriptions' %}active{% endif %}">
                 <i class="bi bi-calendar-check"></i>
                 <span>My Subscriptions</span>
