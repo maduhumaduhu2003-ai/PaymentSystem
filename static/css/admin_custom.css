@@ -1,32 +1,483 @@
-/* SATPAY Orange Brand */
+/* ============================================================================
+   SATPAY ADMIN - CLEAN ORANGE THEME
+   ============================================================================ */
+
+/* ============================================
+   BRAND / LOGO AREA
+============================================ */
 .brand-link {
-    background-color: #f28c18 !important;
-    color: #fff !important;
+    background-color: #ffffff !important;
+    color: #f28c18 !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+    padding: 15px 20px !important;
 }
 
-.navbar-orange {
-    background-color: #f28c18 !important;
+.brand-link:hover {
+    background-color: #fff5e9 !important;
+    color: #f28c18 !important;
 }
 
-.sidebar-dark-orange .nav-sidebar > .nav-item > .nav-link.active {
-    background-color: #f28c18 !important;
-    color: #fff !important;
+.brand-link .brand-text {
+    color: #f28c18 !important;
+    font-weight: 600 !important;
+    font-size: 18px !important;
 }
 
+/* ============================================
+   NAVBAR
+============================================ */
+.navbar-white {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.navbar-light .navbar-nav .nav-link {
+    color: #555555 !important;
+    font-weight: 500 !important;
+    padding: 8px 15px !important;
+    border-radius: 5px !important;
+    transition: all 0.2s ease !important;
+}
+
+.navbar-light .navbar-nav .nav-link:hover {
+    color: #f28c18 !important;
+    background-color: #fff5e9 !important;
+}
+
+.navbar .nav-link {
+    color: #555555 !important;
+}
+
+.navbar .nav-link:hover {
+    color: #f28c18 !important;
+}
+
+/* ============================================
+   SIDEBAR - LIGHT THEME
+============================================ */
+.sidebar-light-orange {
+    background-color: #ffffff !important;
+    border-right: 1px solid #e5e5e5 !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-link {
+    color: #555555 !important;
+    border-radius: 5px !important;
+    margin: 2px 8px !important;
+    padding: 10px 15px !important;
+    transition: all 0.2s ease !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-link:hover {
+    background-color: #fff5e9 !important;
+    color: #f28c18 !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-link.active {
+    background-color: #fff0df !important;
+    color: #f28c18 !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-link.active .nav-icon {
+    color: #f28c18 !important;
+}
+
+/* Sidebar icons */
+.sidebar-light-orange .nav-sidebar .nav-link .nav-icon {
+    color: #777777 !important;
+    font-size: 17px !important;
+    width: 24px !important;
+    text-align: center !important;
+    margin-right: 8px !important;
+}
+
+.sidebar-light-orange .nav-sidebar .nav-link:hover .nav-icon {
+    color: #f28c18 !important;
+}
+
+/* Submenu */
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-treeview > .nav-item > .nav-link {
+    color: #777777 !important;
+    padding-left: 45px !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-treeview > .nav-item > .nav-link:hover {
+    background-color: #fff5e9 !important;
+    color: #f28c18 !important;
+}
+
+.sidebar-light-orange .nav-sidebar > .nav-item > .nav-treeview > .nav-item > .nav-link.active {
+    background-color: #fff0df !important;
+    color: #f28c18 !important;
+    font-weight: 600 !important;
+}
+
+/* ============================================
+   BUTTONS - PRIMARY
+============================================ */
 .btn-primary {
     background-color: #f28c18 !important;
     border-color: #f28c18 !important;
+    color: #ffffff !important;
+    border-radius: 5px !important;
+    padding: 8px 20px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
 }
 
 .btn-primary:hover {
     background-color: #df7d0d !important;
     border-color: #df7d0d !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(242, 140, 24, 0.3) !important;
 }
 
+.btn-primary:focus {
+    background-color: #df7d0d !important;
+    border-color: #df7d0d !important;
+    box-shadow: 0 0 0 0.2rem rgba(242, 140, 24, 0.25) !important;
+}
+
+.btn-outline-primary {
+    color: #f28c18 !important;
+    border-color: #f28c18 !important;
+    border-radius: 5px !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #f28c18 !important;
+    border-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+/* ============================================
+   LINKS
+============================================ */
 a {
-    color: #f28c18;
+    color: #f28c18 !important;
+    text-decoration: none !important;
 }
 
 a:hover {
-    color: #df7d0d;
+    color: #df7d0d !important;
+}
+
+/* ============================================
+   FORM CONTROLS
+============================================ */
+.form-control,
+.form-select {
+    border: 1px solid #dcdcdc !important;
+    border-radius: 5px !important;
+    padding: 8px 14px !important;
+    box-shadow: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #f28c18 !important;
+    box-shadow: 0 0 0 0.15rem rgba(242, 140, 24, 0.12) !important;
+}
+
+.form-check-input:checked {
+    background-color: #f28c18 !important;
+    border-color: #f28c18 !important;
+}
+
+/* ============================================
+   CARDS
+============================================ */
+.card {
+    border: 1px solid #e5e5e5 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035) !important;
+}
+
+.card-header {
+    background-color: #fafafa !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+    font-weight: 600 !important;
+}
+
+/* ============================================
+   TABLE
+============================================ */
+.table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+.table thead th {
+    background-color: #fafafa !important;
+    border-bottom: 2px solid #f28c18 !important;
+    color: #333333 !important;
+    font-weight: 600 !important;
+    padding: 12px 15px !important;
+}
+
+.table tbody td {
+    padding: 12px 15px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    vertical-align: middle !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #fffbf5 !important;
+}
+
+/* ============================================
+   PAGINATION
+============================================ */
+.page-item.active .page-link {
+    background-color: #f28c18 !important;
+    border-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+.page-link {
+    color: #f28c18 !important;
+    border-radius: 5px !important;
+    margin: 0 2px !important;
+}
+
+.page-link:hover {
+    color: #df7d0d !important;
+    background-color: #fff5e9 !important;
+    border-color: #e5e5e5 !important;
+}
+
+/* ============================================
+   BADGES
+============================================ */
+.badge-primary {
+    background-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+.badge-success {
+    background-color: #28a745 !important;
+}
+
+.badge-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge-warning {
+    background-color: #ffc107 !important;
+    color: #333333 !important;
+}
+
+/* ============================================
+   BREADCRUMB
+============================================ */
+.breadcrumb {
+    background-color: transparent !important;
+    padding: 8px 0 !important;
+}
+
+.breadcrumb-item.active {
+    color: #f28c18 !important;
+    font-weight: 600 !important;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: #cccccc !important;
+}
+
+/* ============================================
+   LOGIN PAGE
+============================================ */
+.login-page {
+    background: linear-gradient(135deg, #f28c18 0%, #df7d0d 100%) !important;
+}
+
+.login-box .card {
+    border: none !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+    border-top: 4px solid #f28c18 !important;
+}
+
+.login-logo a {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 26px !important;
+}
+
+.login-card-body {
+    border-radius: 0 0 8px 8px !important;
+    padding: 30px !important;
+}
+
+.btn-login {
+    background-color: #f28c18 !important;
+    border-color: #f28c18 !important;
+    color: #ffffff !important;
+    border-radius: 5px !important;
+    padding: 10px !important;
+    font-weight: 500 !important;
+}
+
+.btn-login:hover {
+    background-color: #df7d0d !important;
+    border-color: #df7d0d !important;
+}
+
+/* ============================================
+   FOOTER
+============================================ */
+.main-footer {
+    background-color: #ffffff !important;
+    border-top: 1px solid #e5e5e5 !important;
+    padding: 15px 30px !important;
+    color: #999999 !important;
+    font-size: 13px !important;
+}
+
+/* ============================================
+   DROPDOWN
+============================================ */
+.dropdown-menu {
+    border: 1px solid #e5e5e5 !important;
+    border-radius: 6px !important;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08) !important;
+    padding: 6px !important;
+}
+
+.dropdown-item {
+    border-radius: 4px !important;
+    padding: 10px 12px !important;
+    font-size: 14px !important;
+}
+
+.dropdown-item:hover {
+    background-color: #fff5e9 !important;
+    color: #f28c18 !important;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+/* ============================================
+   MODAL
+============================================ */
+.modal-header {
+    border-bottom: 2px solid #f28c18 !important;
+    padding: 20px !important;
+}
+
+.modal-content {
+    border: none !important;
+    border-radius: 6px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ============================================
+   ALERTS
+============================================ */
+.alert {
+    border-radius: 5px !important;
+    border: 1px solid #eeeeee !important;
+}
+
+.alert-success {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+    border-color: #c3e6cb !important;
+}
+
+.alert-danger {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    border-color: #f5c6cb !important;
+}
+
+/* ============================================
+   NAV TABS
+============================================ */
+.nav-tabs {
+    border-bottom: 1px solid #e5e5e5 !important;
+}
+
+.nav-tabs .nav-link {
+    color: #777777 !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    font-weight: 500 !important;
+}
+
+.nav-tabs .nav-link:hover {
+    color: #f28c18 !important;
+    background-color: #fff5e9 !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: #f28c18 !important;
+    border-bottom: 3px solid #f28c18 !important;
+    background-color: transparent !important;
+    font-weight: 600 !important;
+}
+
+/* ============================================
+   PROGRESS BAR
+============================================ */
+.progress {
+    height: 8px !important;
+    border-radius: 4px !important;
+    background-color: #f0f0f0 !important;
+}
+
+.progress-bar {
+    background-color: #f28c18 !important;
+    border-radius: 4px !important;
+}
+
+/* ============================================
+   SELECTION
+============================================ */
+::selection {
+    background-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+::-moz-selection {
+    background-color: #f28c18 !important;
+    color: #ffffff !important;
+}
+
+/* ============================================
+   SCROLLBAR
+============================================ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f5f5f5;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #dcdcdc;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #f28c18;
+}
+
+/* ============================================
+   CONTENT HEADER
+============================================ */
+.content-header h1 {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
 }

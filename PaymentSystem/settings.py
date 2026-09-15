@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ============================================================================
 SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-key-change-this")
-DEBUG = os.environ.get("DEBUG", "False").lower() == "False"
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = [
     host.strip() for host in os.environ.get(
@@ -98,7 +98,6 @@ TEMPLATES = [
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
-    # Production (Render/PostgreSQL)
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
@@ -107,7 +106,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Local (SQLite for development)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -145,8 +143,9 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
+        # ✅ Bila manifest - inafanya kazi kwa development na production
         "BACKEND": (
-            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            "whitenoise.storage.CompressedStaticFilesStorage"
             if not DEBUG
             else "django.contrib.staticfiles.storage.StaticFilesStorage"
         ),
@@ -164,7 +163,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 # ============================================================================
-# AUTHENTICATION BACKENDS (ModelBackend tu)
+# AUTHENTICATION BACKENDS
 # ============================================================================
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
@@ -219,9 +218,6 @@ CLICKPESA_MAX_RETRIES = 3
 SELCOM_API_KEY = os.environ.get("SELCOM_API_KEY")
 SELCOM_API_SECRET = os.environ.get("SELCOM_API_SECRET")
 SELCOM_BASE_URL = os.environ.get("SELCOM_BASE_URL", "https://api.selcom.com/v1")
-
-
-
 
 # SMS Configuration (Beem Africa)
 BEEM_API_KEY = os.environ.get('BEEM_API_KEY', '')
@@ -281,17 +277,24 @@ CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_AGE = 60 * 60 * 8  # 8 hours
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-
+# ============================================================================
+# JAZZMIN SETTINGS
+# ============================================================================
 JAZZMIN_SETTINGS = {
     # Titles
     "site_title": "SATPAY Admin",
     "site_header": "SATPAY",
     "site_brand": "SATPAY",
-    "site_logo": "images/favicon.png",           # logo yako (weka kwenye static/images/)
-    "site_logo_classes": "img-circle",
-    "site_icon": "images/favicon.png",           # favicon ya admin
+
+    # Logo & Icon
+    "site_icon": "images/favicon.ico",
+
+    # ✅ Custom CSS (clean design)
+    "custom_css": "css/admin_custom.css",
+
     "welcome_sign": "Welcome to SATPAY Administration",
     "copyright": "SATPAY",
+
     "search_model": ["accounts.User", "payments.Payment"],
 
     # Sidebar
@@ -299,6 +302,7 @@ JAZZMIN_SETTINGS = {
     "navigation_expanded": True,
     "hide_apps": [],
     "hide_models": [],
+
     "order_with_respect_to": [
         "accounts",
         "business",
@@ -308,7 +312,7 @@ JAZZMIN_SETTINGS = {
         "auth",
     ],
 
-    # Icons (FontAwesome)
+    # Icons
     "icons": {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user",
@@ -320,40 +324,56 @@ JAZZMIN_SETTINGS = {
         "payments": "fas fa-credit-card",
         "subscriptions": "fas fa-calendar-check",
     },
+
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
 
     # UI
     "related_modal_active": True,
-    "custom_css": None,
     "custom_js": None,
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
 
     # Top menu
     "topmenu_links": [
-        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "SATPAY Website", "url": "/", "new_window": True},
+        {
+            "name": "Home",
+            "url": "admin:index",
+            "permissions": ["auth.view_user"],
+        },
+        {
+            "name": "SATPAY Website",
+            "url": "/",
+            "new_window": True,
+        },
     ],
 
     # User menu
     "usermenu_links": [
-        {"name": "SATPAY Website", "url": "/", "new_window": True},
+        {
+            "name": "SATPAY Website",
+            "url": "/",
+            "new_window": True,
+        },
     ],
 
-    # Language chooser
     "language_chooser": False,
 }
 
+# ============================================================================
+# JAZZMIN UI TWEAKS - CLEAN DESIGN
+# ============================================================================
 JAZZMIN_UI_TWEAKS = {
     "theme": "flatly",
-    "default_theme_mode": "auto",   # theme ya dark mode
+    "default_theme_mode": "light",   # ✅ Light mode kama system
     
-    "navbar": "navbar-orange navbar-light",   # rangi ya navbar
+    # Navbar
+    "navbar": "navbar-white navbar-light",   # ✅ Clean white navbar
     "no_navbar_border": True,
     "navbar_fixed": True,
     
-    "sidebar": "sidebar-dark-orange",         # rangi ya sidebar
+    # Sidebar
+    "sidebar": "sidebar-light-orange",   # ✅ Light sidebar na orange accent
     "sidebar_nav_small_text": False,
     "sidebar_disable_expand": False,
     "sidebar_nav_child_indent": True,
@@ -361,10 +381,12 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_nav_flat_style": True,
     "sidebar_nav_legacy_style": False,
     
+    # Text sizes
     "footer_small_text": False,
     "body_small_text": False,
     "brand_small_text": False,
     
+    # Buttons
     "button_classes": {
         "primary": "btn-primary",
         "secondary": "btn-secondary",
